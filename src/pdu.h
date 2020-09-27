@@ -1,8 +1,8 @@
 #ifndef _PDU_h_
 #define _PDU_h_
 
-
 #include <stdint.h>
+#include <stddef.h>
 
 // Service Center Address
 #define SCA_MIN_LEN 1
@@ -77,7 +77,12 @@ typedef struct
 pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_pocket *pocket);
 
 
-struct
+typedef enum
+{
+    _NO_ERROR = 0,
+} pdu_decode_status;
+
+typedef struct
 {
     struct {
         uint8_t data[OA_MAX_LEN];
@@ -96,9 +101,9 @@ struct
 /**
  * Декодирует PDU пакет в человеко-читаемый вид
  * @param pdu_pocket PDU пакет
- * @param kek результат декодировния
+ * @param pocket результат декодировния
  * @return статус декодировния
  */
-void decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket);
+pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pocket *pocket);
 
 #endif
