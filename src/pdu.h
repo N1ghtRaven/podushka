@@ -80,6 +80,9 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
 typedef enum
 {
     _NO_ERROR = 0,
+    WRONG_OA_TYPE = 1,
+    ERROR_RESIZE_OA = 2,
+    ERROR_RESIZE_UD = 3
 } pdu_decode_status;
 
 typedef struct
@@ -94,7 +97,11 @@ typedef struct
         uint8_t size;
     } message;
 
-    uint64_t timestamp;
+    struct {
+        time_t timestamp;
+        int8_t timezone;
+    } time;
+
 } deliver_pocket;
 
 

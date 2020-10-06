@@ -1,6 +1,7 @@
 #include "pdu.h"
 
 #include <stdlib.h>
+#include <time.h>
 #include <string.h>
 
 pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_pocket *pocket)
@@ -95,41 +96,216 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
  * @param input_chain исходная цепочка байт
  * @param len длина цепочки
  * @param output_chain цепочка байт с измененным порядком
+ * @return размер измененной цепочки
  */
-void switch_endianness(uint8_t *input_chain, size_t len, uint8_t *output_chain)
+size_t switch_endianness(uint8_t *input_chain, size_t len, uint8_t *output_chain)
 {
+    if (len < 2)
+    {
+        return 0;
+    }
+
+    memset(output_chain, len, sizeof(uint8_t));
+
+    // is odd 
+    if (!(len % 2))
+    {
+        len -=1;
+    }
+
     for (size_t i = 0; i < len; i += 2)
     {
         output_chain[i] = input_chain[i + 1];
         output_chain[i + 1] = input_chain[i];
     }
+
+    return len;
 }
+
+/**
+ * Извлекает из ASCII символа (шеснадцатиричная СС) числовое значение
+ * @param input входной байт в виде символа
+ * @return числовое значание (-1, если данные ошибочны)
+ */
+int8_t num_from_ascii(char input)
+{
+    if ( input - '0' >= 0 && '9' - input >= 0 )
+    {
+        return input - '0';
+    } else if ( input - 'a' >= 0 && 'f' - input >= 0 )
+    {
+        return input - 'a' + 10;
+    } else if ( input - 'A' >= 0 && 'F' - input >= 0 )
+    {
+        return input - 'A' + 10;
+    }
+    else
+    {
+        return -1; // Wrong data 
+    }
+}
+
+
+/**
+ * Переводит число в символ таблицы ASCII
+ * @param num число
+ * @return символ таблицы ASCII
+ */
+uint8_t num_to_ascii(uint8_t num)
+{
+    if ((num >= 0x30) && (num <= 0x39)) 
+    {
+        return num - 0x30;
+    }
+    else if ((num >= 'A') && (num <= 'F'))
+    {
+        return num - 'A' + 10;
+    }   
+    else
+    {
+        return 0;
+    }
+}
+
+/**
+ * TODO Покрыть тестами
+ * Декодер GSM 7-ми битной строки
+ * @param input входная закодированная строка
+ * @param size размер входной строки
+ * @param output раскодированная строка
+ * @return размер выходной строки
+ */
+size_t gsm_decode_7bit(uint8_t *input, size_t size, uint8_t *output)
+{
+    size_t output_size = 0;
+
+    uint16_t bit_buffer = 0;
+    uint8_t bit_buffer_size = 0;
+    while ( *input != '\0' ) 
+    {
+        // Convert char to num
+        int16_t num = ( num_from_ascii(*(input++)) << 4 ) | num_from_ascii(*(input++));
+        if (num < 0)
+        {
+            return -1; // TODO: drop some error
+        }
+
+        bit_buffer = (uint8_t) num << bit_buffer_size | bit_buffer;
+        bit_buffer_size += 8;
+        while ( bit_buffer_size >= 7)
+        {
+            output[output_size++] = ( bit_buffer & 0x7F );
+            bit_buffer = bit_buffer >> 7;
+            bit_buffer_size -= 7;
+        }
+    }
+    
+    return output_size;
+}
+
+/**
+ * Декодер UCS2 строки
+ * @param input входная строка
+ * @param size размер входной строки
+ * @param output раскодированная строка
+ * @return размер выходной строки
+ */
+size_t gsm_decode_UCS2(uint8_t *input, size_t size, uint8_t *output) {
+    uint8_t c[5] = "";
+    for (uint16_t i = 0; i < size - 3; i += 4)
+    {
+        // Получаем UNICODE-код символа из HEX представления
+        uint64_t code = ( ((uint16_t) num_to_ascii(input[i])) << 12) +    
+                        ( ((uint16_t) num_to_ascii(input[i + 1])) << 8) +
+                        ( ((uint16_t) num_to_ascii(input[i + 2])) << 4) +
+                        ( (uint16_t) num_to_ascii(input[i + 3]) );
+        
+        // В соответствии с количеством байт формируем символ
+        // Не забываем про завершающий ноль
+        if (code <= 0x7F) 
+        {                               
+            c[0] = (char) code;                              
+            c[1] = 0;                 
+        }
+        else if (code <= 0x7FF)
+        {
+            c[0] = (char) (0xC0 | (code >> 6));
+            c[1] = (char) (0x80 | (code & 0x3F));
+            c[2] = 0;
+        }
+        else if (code <= 0xFFFF)
+        {
+            c[0] = (char) (0xE0 | (code >> 12));
+            c[1] = (char) (0x80 | ((code >> 6) & 0x3F));
+            c[2] = (char) (0x80 | (code & 0x3F));
+            c[3] = 0;
+        }
+        else if (code <= 0x1FFFFF)
+        {
+            c[0] = (char) (0xE0 | (code >> 18));
+            c[1] = (char) (0xE0 | ((code >> 12) & 0x3F));
+            c[2] = (char) (0x80 | ((code >> 6) & 0x3F));
+            c[3] = (char) (0x80 | (code & 0x3F));
+            c[4] = 0;
+        }
+        strcat(output, c);             
+    }
+
+    return size;  
+}
+
 
 pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pocket *pocket)
 {
     // Clear pocket struct
-    memset(pocket, 0, sizeof(deliver_pdu_pocket));
+    memset(pocket, 0, sizeof(deliver_pocket));
 
     // Decode Sender
-    size_t buffer_size = OA_MAX_LEN;
+    size_t buffer_size = PDU_MAX_LEN;
     uint8_t buffer[buffer_size];
 
     switch (pdu_pocket->TP_OA.type)
     {
         case OA_7_BIT:
-            //buffer_size = decode7bit(pdu_pocket.TP_OA.data, pdu_pocket.TP_OA.size, &buffer);
+            buffer_size = gsm_decode_7bit(pdu_pocket->TP_OA.data, pdu_pocket->TP_OA.size, &buffer);
             break;
-        case OA_LITTLE_ENDIAN_NUMBER:
+        case OA_LITTLE_ENDIAN_NUMBER: //TODO: Testing
             buffer_size = pdu_pocket->TP_OA.size;
             switch_endianness(pdu_pocket->TP_OA.data, pdu_pocket->TP_OA.size, &buffer);
             break;
         default:
-            return 1; // ERROR    
+            return WRONG_OA_TYPE;    
     }
 
     pocket->sender.size = buffer_size;
     strncpy(pocket->sender.data, buffer, buffer_size);
 
+    // Decode Message
+    buffer_size = UD_MAX_LEN;
+    memset(buffer, '\0', buffer_size * sizeof(uint8_t));
+
+    switch (pdu_pocket->TP_DCS)
+    {
+        case DCS_7_BIT:
+            buffer_size = gsm_decode_7bit(pdu_pocket->TP_UD, pdu_pocket->TP_UDL, &buffer);
+            break;
+        case DCS_UCS2:
+            buffer_size = gsm_decode_UCS2(pdu_pocket->TP_UD, (pdu_pocket->TP_UDL * 2) + 1, &buffer);
+            break;
+    }
+
+    strncpy(pocket->message.data, buffer, buffer_size);
+    pocket->message.size = buffer_size;
+
+    // Decode Timestamp
+    memset(buffer, '\0', TP_SCTS_SIZE);
+    buffer_size = TP_SCTS_SIZE;
+    switchEndian(pdu_pocket->TP_SCTS, TP_SCTS_SIZE, &buffer);
+
+    char tm_buffer[4];
+    memset(tm_buffer, '\0', 4);
+
+    struct tm timestamp;
 
     return 0;
 }
@@ -146,230 +322,8 @@ void main(void)
 }
 #endif
 
+
 /*
-
-#include "stdio.h"
-#include <stdint.h>
-#include "string.h"
-#include "stdlib.h"
-
-#define BUFFER_SIZE 0xFF
-#define BYTE_COUNT 2
-#define TP_SCTS_SIZE 14
-
-struct
-{
-    enum 
-    { 
-        OA_7_BIT = 0xD0, OA_LITTLE_ENDIAN_NUMBER = 0x91, 
-        DCS_7_BIT = 0x00, DCS_UCS2 = 0x08
-    };
-
-    struct
-    {
-        uint8_t size;
-        uint8_t type;
-        uint8_t data[BUFFER_SIZE];
-    } TP_SCA;
-    
-    uint8_t TP_MTI_CO;
-
-    struct
-    {
-        uint8_t size;
-        uint8_t type;
-        uint8_t data[BUFFER_SIZE];
-    } TP_OA;
-    
-    uint8_t TP_PID;
-    uint8_t TP_DCS;
-    uint8_t TP_SCTS[BUFFER_SIZE];
-
-    uint8_t TP_UDL;
-    uint8_t TP_UD[BUFFER_SIZE];
-} pdu_pocket;
-
-struct
-{
-    struct {
-        uint8_t data[BUFFER_SIZE];
-        uint8_t size;
-    } from;
-
-    struct {
-        uint8_t data[BUFFER_SIZE];
-        uint8_t size;
-    } message;
-
-    struct 
-    {
-        uint8_t year;
-        uint8_t month;
-        uint8_t day;
-        uint8_t hour;
-        uint8_t min;
-        uint8_t sec;
-        uint8_t timezone;
-    } timestamp;
-} sms;
-
-void parsePdu(uint8_t *hex, size_t size)
-{
-    uint8_t buffer[BUFFER_SIZE];
-    uint8_t frame = 0;
-
-    //Parse TP-SCA
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_SCA.size = (uint8_t) strtol(buffer, NULL, 16);
-
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_SCA.type = (uint8_t) strtol(buffer, NULL, 16);
-
-    strncpy(pdu_pocket.TP_SCA.data, hex + frame, (pdu_pocket.TP_SCA.size - 1) * 2);
-    frame += (pdu_pocket.TP_SCA.size - 1) * 2;  
-
-    //Parse TP-MTI-CO
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_MTI_CO = (uint8_t) strtol(buffer, NULL, 16);
-
-    //Parse TP-OA
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_OA.size = (uint8_t) strtol(buffer, NULL, 16);
-
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_OA.type = (uint8_t) strtol(buffer, NULL, 16);
-
-    uint8_t real_oa_size = (pdu_pocket.TP_OA.size % 2) > 0 ? pdu_pocket.TP_OA.size + 1 : pdu_pocket.TP_OA.size;
-    strncpy(pdu_pocket.TP_OA.data, hex + frame, real_oa_size);
-    frame += real_oa_size;
-
-    //Parse TP-PID
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_PID = (uint8_t) strtol(buffer, NULL, 16);
-
-    //Parse TP-DCS
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_DCS = (uint8_t) strtol(buffer, NULL, 16);
-
-    //Parse TP-SCTS
-    strncpy(pdu_pocket.TP_SCTS, hex + frame, TP_SCTS_SIZE);
-    frame += TP_SCTS_SIZE;
-
-    //Parse TP-UDL
-    strncpy(buffer, hex + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    pdu_pocket.TP_UDL = (uint8_t) strtol(buffer, NULL, 16);
-
-    //Parse TP-UD
-    strncpy(pdu_pocket.TP_UD, hex + frame, pdu_pocket.TP_UDL * 2);
-    frame += pdu_pocket.TP_UDL * 2;
-}
-
-
-
-void extractData (char input, uint8_t *output)
-{
-    if ( input - '0' >= 0 && '9' - input >= 0 ) {
-        * output = input - '0';
-    } else if ( input - 'a' >= 0 && 'f' - input >= 0 ) {
-        * output = input - 'a' + 10;
-    } else if ( input - 'A' >= 0 && 'F' - input >= 0 ) {
-        * output = input - 'A' + 10;
-    }
-}
-
-size_t decode7bit(uint8_t *hex, size_t len, uint8_t *res)
-{
-    uint16_t data = 0;
-    uint8_t data_length = 0;
-
-    size_t res_size = -1;
-    while ( *hex != '\0' ) 
-    {
-        uint8_t new_data, d;
-
-        extractData(*hex, &d);
-        new_data = d << 4;
-
-        extractData(*(hex + 1 ), &d);
-        new_data = new_data | d;
-
-        hex += 2;
-
-        data = new_data << data_length | data;
-        data_length += 8;
-
-        while ( data_length >= 7 ) {
-            res_size++;
-            res[res_size] = (data & 0x7f);
-            
-            data = data >> 7;
-            data_length -= 7;
-        }
-    }
-    return res_size + 1;
-    //strncpy(sms.from.data, res, index + 1);
-    // out = res;
-    // out_size = index + 1;
-    //sms.from.size = index + 1;
-}
-
-
-
-void switchEndian(uint8_t *little_endian_chain, size_t len, uint8_t *res)
-{
-    for (size_t i = 0; i < len; i += 2)
-    {
-        res[i] = little_endian_chain[i + 1];
-        res[i + 1] = little_endian_chain[i];
-    }
-}
-
-
-uint8_t hexToChar(uint8_t c) {
-  if      ((c >= 0x30) && (c <= 0x39)) return (c - 0x30);
-  else if ((c >= 'A') && (c <= 'F'))   return (c - 'A' + 10);
-  else                                 return (0);
-}
-
-size_t decodeUCS2(uint8_t *s, size_t size, uint8_t *out) {
-  uint8_t res[BUFFER_SIZE];                         // Функция декодирования UCS2 строки
-  unsigned char c[5] = "";                            // Массив для хранения результата
-  for (uint16_t i = 0; i < (size * 2) - 3; i += 4) {       // Перебираем по 4 символа кодировки
-    unsigned long code = (((uint16_t)hexToChar(s[i])) << 12) +    // Получаем UNICODE-код символа из HEX представления
-                         (((uint16_t)hexToChar(s[i + 1])) << 8) +
-                         (((uint16_t)hexToChar(s[i + 2])) << 4) +
-                         ((uint16_t)hexToChar(s[i + 3]));
-    if (code <= 0x7F) {                               // Теперь в соответствии с количеством байт формируем символ
-      c[0] = (char)code;                              
-      c[1] = 0;                                       // Не забываем про завершающий ноль
-    } else if (code <= 0x7FF) {
-      c[0] = (char)(0xC0 | (code >> 6));
-      c[1] = (char)(0x80 | (code & 0x3F));
-      c[2] = 0;
-    } else if (code <= 0xFFFF) {
-      c[0] = (char)(0xE0 | (code >> 12));
-      c[1] = (char)(0x80 | ((code >> 6) & 0x3F));
-      c[2] = (char)(0x80 | (code & 0x3F));
-      c[3] = 0;
-    } else if (code <= 0x1FFFFF) {
-      c[0] = (char)(0xE0 | (code >> 18));
-      c[1] = (char)(0xE0 | ((code >> 12) & 0x3F));
-      c[2] = (char)(0x80 | ((code >> 6) & 0x3F));
-      c[3] = (char)(0x80 | (code & 0x3F));
-      c[4] = 0;
-    }
-    strcat(out, c); // Добавляем полученный символ к результату                 
-  }
-  return size;  
-}
 
 void decodePdu()
 {
@@ -439,18 +393,6 @@ void decodePdu()
     sms.timestamp.timezone = (uint8_t) strtol(timestamp_buffer, NULL, 10);
 }
 
-int div_up(int x, int y)
-{
-    return (x - 1) / y;
-}
-
-void main()
-{
-    div_t qq = div(387, 16);
-    int q = div_up(387, 16);
-    printf("%d.%d",qq.quot, qq.rem);
-}
-
 // void main(void)
 // {
 //     uint8_t *hex = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
@@ -459,19 +401,6 @@ void main()
 //     parsePdu(hex, size);
 //     //parsePdu("07919761989901F0040B919701119905F80000211062320150610CC8329BFD065DDF72363904", 77);
 //     //parsePdu("07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438", 275);
-    
-//     printf("TP-SCA size - %d\n", pdu_pocket.TP_SCA.size);
-//     printf("TP-SCA type - %d\n", pdu_pocket.TP_SCA.type);
-//     printf("TP-SCA data - %s\n", pdu_pocket.TP_SCA.data);
-//     printf("TP-MTI-CO - %d\n", pdu_pocket.TP_MTI_CO);
-//     printf("TP-OA size - %d\n", pdu_pocket.TP_OA.size);
-//     printf("TP-OA type - %d\n", pdu_pocket.TP_OA.type);
-//     printf("TP-OA data - %s\n", pdu_pocket.TP_OA.data);
-//     printf("TP-PID - %d\n", pdu_pocket.TP_PID);
-//     printf("TP-DCS - %d\n", pdu_pocket.TP_DCS);
-//     printf("TP-SCTS data - %s\n", pdu_pocket.TP_SCTS);
-//     printf("TP-UDL - %d\n", pdu_pocket.TP_UDL);
-//     printf("TP-UD - %s\n\n", pdu_pocket.TP_UD);
 
 //     decodePdu();
 //     printf("From - %s\n", sms.from.data);
@@ -485,8 +414,11 @@ void main()
 #ifdef UNIT_TEST
 #include <criterion/criterion.h>
 #include <stdio.h>
+#include <locale.h>
 
 deliver_pdu_pocket pocket;
+deliver_pocket dec_pocket;
+
 
 void setup(void)
 {
@@ -640,6 +572,118 @@ Test(deliver_pdu_parser, junk) // .init = setup, .fini = dump_pocket
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     // "Expect %d, but recieve %d", WRONG_UD_SIZE, st printf("%d\n",st);
     cr_assert(st);
+}
+
+Test(switch_endianness, valid)
+{
+    // const char* valid = "000102030405060708090A0B0C0D0E0F";
+    // char* raw = "00102030405060708090A0B0C0D0E0F0";
+
+    const char* valid = "01020304";
+    const char* raw = "10203040";
+    size_t raw_size = 8;
+
+    const char* result[raw_size];
+    switch_endianness(raw, raw_size, &result);
+    
+    cr_assert(!strncmp(valid, result, raw_size), "Except %s, but recieve %s",valid,result);
+}
+
+Test(switch_endianness, wrong_size)
+{
+    const char* raw = "0";
+    size_t raw_size = 1;
+
+    const char* result[raw_size];
+    size_t new_size = switch_endianness(raw, raw_size, &result);
+    
+    cr_assert(!new_size, "Except %d, but recieve %s",0,new_size);
+}
+
+Test(num_from_ascii, valid)
+{
+    uint8_t validate[22] = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+        10, 11, 12, 13, 14, 15,
+        10, 11, 12, 13, 14, 15
+    };
+    uint8_t *input = "0123456789abcdefABCDEF";
+
+    for (int8_t i = 0; i < 22; i++)
+    {
+        int8_t data = num_from_ascii(*(input + i));
+
+        if (data == -1)
+        {
+            cr_assert(false, "#%d: Receive wrong data", i);    
+        }
+
+        if (data != validate[i])
+        {
+            cr_assert(false, "#%d: Expected %d, but receive %d", i, validate[i], data);
+        }
+    }
+    
+    cr_assert(true);
+}
+
+Test(num_from_ascii, wrong_data)
+{
+    const uint8_t* input = "G";
+    int8_t data = num_from_ascii(*input);
+    cr_assert(data == -1);
+}
+
+
+// Test(gsm_decode_7bit, valid)
+// {
+//     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
+//     size_t size = 275;
+    
+//     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
+    
+//     uint8_t old_algo[OA_MAX_LEN];
+//     old_gsm_decode_7bit(pocket.TP_OA.data, pocket.TP_OA.size, &old_algo);
+
+//     uint8_t new_algo[OA_MAX_LEN];
+//     gsm_decode_7bit(pocket.TP_OA.data, pocket.TP_OA.size, &new_algo);
+    
+//     cr_assert(!strcmp(old_algo, new_algo), "Expected %s, but have %s", old_algo, new_algo);
+// }
+
+
+Test(decode_pdu_pocket, oa_valid)
+{
+    setlocale(LC_ALL, "");
+
+    char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
+    size_t size = 275;
+    
+    pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
+    pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
+
+    // printf("%s\n", dec_pocket.sender.data);
+    printf("%d: %s\n", dec_pocket.message.size, dec_pocket.message.data);
+
+    cr_assert(!dst, "%d", dst);
+}
+
+Test(timestamp, valid)
+{
+    struct tm timestamp;
+    time_t time;
+
+    timestamp.tm_year = 2020 - 1900;
+    timestamp.tm_mon = 10 - 1;
+    timestamp.tm_mday = 6;
+    timestamp.tm_hour = 22;
+    timestamp.tm_min = 23;
+    timestamp.tm_sec = 30;
+
+    time = mktime(&timestamp);
+    
+    // printf("%ld", time);
+    cr_assert(true);
 }
 
 #endif
