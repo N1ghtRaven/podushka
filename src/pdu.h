@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <time.h>
 
 // Service Center Address
 #define SCA_MIN_LEN 1
