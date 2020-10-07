@@ -297,87 +297,58 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
     pocket->message.size = buffer_size;
 
     // Decode Timestamp
+    struct tm timestamp = {};
     char tm_buffer[PDU_FRAME_STEP];
     uint8_t tm_frame = 0;
     
-    memset(buffer, '\0', TP_SCTS_SIZE);
     buffer_size = TP_SCTS_SIZE;
-    switch_endianness(pdu_pocket->TP_SCTS, TP_SCTS_SIZE, &buffer);
-
-    struct tm timestamp;
+    switch_endianness(pdu_pocket->TP_SCTS, TP_SCTS_SIZE, &buffer); 
 
     // Year
     strncpy(tm_buffer, buffer, PDU_FRAME_STEP);
     timestamp.tm_year = strtol(tm_buffer, NULL, 10) + 100;
 
-    printf("%d\n", timestamp.tm_year);
-
     // Month
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
     timestamp.tm_mon = strtol(tm_buffer, NULL, 10) - 1;
     
-    printf("%d\n", timestamp.tm_mon);
-
     // Day
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
     timestamp.tm_mday = strtol(tm_buffer, NULL, 10);
-
-    printf("%d\n", timestamp.tm_mday);
 
     // Hour
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
     timestamp.tm_hour = strtol(tm_buffer, NULL, 10);
 
-    printf("%d\n", timestamp.tm_hour);
-
     // Minute
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
     timestamp.tm_min = strtol(tm_buffer, NULL, 10);
-
-    printf("%d\n", timestamp.tm_min);
 
     // Sec
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
     timestamp.tm_sec = strtol(tm_buffer, NULL, 10);
     
-    printf("%d\n", timestamp.tm_sec);
-
     // TimeZone
     strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
-    timestamp.tm_zone = 'M';
-    //timestamp.tm_zone = (int8_t) strtol(tm_buffer, NULL, 10) / 4;
-    
-    time_t time = mktime(&timestamp);
-    time = mktime(&timestamp);
-    time = mktime(&timestamp);
+    pocket->time.timezone = (int8_t) strtol(tm_buffer, NULL, 10) / 4;
+    pocket->time.timestamp = mktime(&timestamp);
+   
+    if (pocket->time.timestamp == -1)
+    {
+        return WRONG_TIMESTAMP;
+    }
 
-
-    printf("%ul\n", time);
-
-    // struct tm timestamp2;
-    // time_t time2;
-
-    // timestamp2.tm_year = 2020 - 1900;
-    // timestamp2.tm_mon = 10 - 1;
-    // timestamp2.tm_mday = 6;
-    // timestamp2.tm_hour = 22;
-    // timestamp2.tm_min = 23;
-    // timestamp2.tm_sec = 30;
-
-    // time2 = mktime(&timestamp2);
-
-    return 0;
+    return _NO_ERROR;
 }
 
 #ifndef UNIT_TEST
+
 deliver_pdu_pocket pdu_pocket;
 deliver_pocket pocket;
 
 void main(void)
 {
     //setlocale(LC_ALL, "");
-
-
 
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
     size_t size = 275;
@@ -392,88 +363,12 @@ void main(void)
 
 /*
 
-void decodePdu()
-{
-    //Decode Sender
-    uint8_t buffer[BUFFER_SIZE];
-    size_t buffer_size = BUFFER_SIZE;
-    switch (pdu_pocket.TP_OA.type)
-    {
-        case OA_7_BIT:
-            buffer_size = decode7bit(pdu_pocket.TP_OA.data, pdu_pocket.TP_OA.size, &buffer);
-            break;
-        case OA_LITTLE_ENDIAN_NUMBER:
-            buffer_size = pdu_pocket.TP_OA.size;
-            switchEndian(pdu_pocket.TP_OA.data, pdu_pocket.TP_OA.size, &buffer);
-            break;
-    }
-    strncpy(sms.from.data, buffer, buffer_size);
-    sms.from.size = buffer_size;
-
-    //Decode Messgae
-    memset(buffer, '\0', BUFFER_SIZE);
-    buffer_size = BUFFER_SIZE;
-    switch (pdu_pocket.TP_DCS)
-    {
-        case DCS_7_BIT:
-            buffer_size = decode7bit(pdu_pocket.TP_UD, pdu_pocket.TP_UDL, &buffer);
-            break;
-        case DCS_UCS2:
-            buffer_size = decodeUCS2(pdu_pocket.TP_UD, (pdu_pocket.TP_UDL * 2) + 1, &buffer);
-            break;
-    }
-    strncpy(sms.message.data, buffer, buffer_size);
-    sms.message.size = buffer_size;
-
-    //Decode timestamp
-    memset(buffer, '\0', BUFFER_SIZE);
-    buffer_size = BUFFER_SIZE;
-    uint8_t timestamp_buffer[BUFFER_SIZE], frame;
-    switchEndian(pdu_pocket.TP_SCTS, TP_SCTS_SIZE, &buffer);
-
-    strncpy(timestamp_buffer, buffer, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.year = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.month = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.day = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.hour = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.min = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.sec = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-
-    strncpy(timestamp_buffer, buffer + frame, BYTE_COUNT);
-    frame += BYTE_COUNT;
-    sms.timestamp.timezone = (uint8_t) strtol(timestamp_buffer, NULL, 10);
-}
-
 // void main(void)
 // {
-//     uint8_t *hex = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
-//     size_t size = 275;
-    
 //     parsePdu(hex, size);
 //     //parsePdu("07919761989901F0040B919701119905F80000211062320150610CC8329BFD065DDF72363904", 77);
 //     //parsePdu("07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438", 275);
-
-//     decodePdu();
-//     printf("From - %s\n", sms.from.data);
-//     printf("Message - %s\n", sms.message.data);
-//     printf("Timestamp - %d/%d/%d %d:%d:%d %d\n", sms.timestamp.year, sms.timestamp.month, sms.timestamp.day, sms.timestamp.hour, sms.timestamp.min, sms.timestamp.sec, sms.timestamp.timezone);
-// }  
+    }  
 
 
 */
@@ -485,13 +380,6 @@ void decodePdu()
 
 deliver_pdu_pocket pocket;
 deliver_pocket dec_pocket;
-
-
-void setup(void)
-{
-// pdu p;
-//     pocket = p;
-}
 
 void dump_pocket(void)
 {
@@ -730,7 +618,7 @@ Test(decode_pdu_pocket, oa_valid)
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
     // printf("%s\n", dec_pocket.sender.data);
-    printf("%d: %s\n", dec_pocket.message.size, dec_pocket.message.data);
+    printf("%ld: %s\n", dec_pocket.time.timestamp, dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
 }
