@@ -1,7 +1,5 @@
 #include "pdu.h"
-
 #include <stdlib.h>
-#include <string.h>
 
 pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_pocket *pocket)
 {
