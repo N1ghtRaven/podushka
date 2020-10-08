@@ -1,5 +1,5 @@
 PRJ_NAME=pdu
-CFLAGS +=-s -Os -flto -fno-asynchronous-unwind-tables
+CFLAGS +=-s -Os
 all: $(PRJ_NAME)
 
 test: 

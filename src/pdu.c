@@ -271,6 +271,7 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
             switch_endianness(pdu_pocket->TP_OA.data, pdu_pocket->TP_OA.size, &buffer);
             break;
         default:
+            // Why drop???
             return WRONG_OA_TYPE;    
     }
 
@@ -346,15 +347,11 @@ deliver_pocket pocket;
 
 void main(void)
 {
-    //setlocale(LC_ALL, "");
-
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
     size_t size = 275;
     
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pdu_pocket);
     pdu_decode_status dst = decode_pdu_pocket(&pdu_pocket, &pocket);
-
-    // printf("%s\n", dec_pocket.sender.data);
 }
 #endif
 
@@ -587,25 +584,7 @@ Test(num_from_ascii, wrong_data)
     cr_assert(data == -1);
 }
 
-
-// Test(gsm_decode_7bit, valid)
-// {
-//     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
-//     size_t size = 275;
-    
-//     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
-    
-//     uint8_t old_algo[OA_MAX_LEN];
-//     old_gsm_decode_7bit(pocket.TP_OA.data, pocket.TP_OA.size, &old_algo);
-
-//     uint8_t new_algo[OA_MAX_LEN];
-//     gsm_decode_7bit(pocket.TP_OA.data, pocket.TP_OA.size, &new_algo);
-    
-//     cr_assert(!strcmp(old_algo, new_algo), "Expected %s, but have %s", old_algo, new_algo);
-// }
-
-
-Test(decode_pdu_pocket, oa_valid)
+Test(decode_pdu_pocket, valid_UCS2)
 {
     setlocale(LC_ALL, "");
 
@@ -616,27 +595,25 @@ Test(decode_pdu_pocket, oa_valid)
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
     // printf("%s\n", dec_pocket.sender.data);
-    printf("%ld: %s\n", dec_pocket.time.timestamp, dec_pocket.message.data);
+    // printf("%ld: %s\n", dec_pocket.time.timestamp, dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
 }
 
-// Test(timestamp, valid)
-// {
-//     struct tm timestamp;
-//     time_t time;
+Test(decode_pdu_pocket, valid_7bit)
+{
+    setlocale(LC_ALL, "");
 
-//     timestamp.tm_year = 2020 - 1900;
-//     timestamp.tm_mon = 10 - 1;
-//     timestamp.tm_mday = 6;
-//     timestamp.tm_hour = 22;
-//     timestamp.tm_min = 23;
-//     timestamp.tm_sec = 30;
-
-//     time = mktime(&timestamp);
+    char* hex_pocket = "0791448720003023240DD0E474D81C0EBB010000111011315214000BE474D81C0EBB5DE3771B";
+    size_t size = 76;
     
-//     printf("%ld", time);
-//     cr_assert(true);
-// }
+    pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
+    pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
+
+    // printf("%ld - %s\n", dec_pocket.time.timestamp, dec_pocket.sender.data);
+    // printf("%s\n", dec_pocket.message.data);
+
+    cr_assert(!dst, "%d", dst);
+}
 
 #endif
