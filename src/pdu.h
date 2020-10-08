@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <time.h>
 
 // Service Center Address
 #define SCA_MIN_LEN 1
@@ -81,8 +82,7 @@ typedef enum
 {
     _NO_ERROR = 0,
     WRONG_OA_TYPE = 1,
-    ERROR_RESIZE_OA = 2,
-    ERROR_RESIZE_UD = 3
+    WRONG_TIMESTAMP = 2
 } pdu_decode_status;
 
 typedef struct
@@ -106,6 +106,7 @@ typedef struct
 
 
 /**
+ * TODO покрыть тестами
  * Декодирует PDU пакет в человеко-читаемый вид
  * @param pdu_pocket PDU пакет
  * @param pocket результат декодировния
