@@ -114,4 +114,51 @@ typedef struct
  */
 pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pocket *pocket);
 
+
+typedef enum
+{
+    __NO_ERROR = 0,
+    // WRONG_POCKET_SIZE = 1,
+    // WRONG_SCA_SIZE = 2,
+    // WRONG_OA_SIZE = 3,
+    // WRONG_UD_SIZE = 4
+} pdu_serialize_status;
+
+
+typedef struct
+{
+    uint8_t sca; // 0x00 default 
+
+    uint8_t pdu_type;
+    uint8_t mr; // Message Reference
+
+    struct
+    {
+        uint8_t size;
+        uint8_t type;
+        uint8_t data[OA_MAX_LEN];
+    } da; // Destination Address
+
+    uint8_t pid; // Protocol ID
+    uint8_t dcs; // Data Coding Scheme
+    uint8_t vp[7]; // Validate Period
+
+    uint8_t udl;
+    uint8_t ud[UD_MAX_LEN];
+} submit_pdu_pocket;
+
+/**
+ * Сериализует Submit пакет в строку
+ * @param pdu_pocket Submit пакет
+ * @param output сериализованная строка
+ * @param size размер сериализованной строки
+ */
+pdu_serialize_status serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size);
+
+
+// typedef struct
+// {
+
+// } submit_pocket;
+
 #endif
