@@ -33,6 +33,21 @@
 #define DCS_UCS2 0x08
 #define TP_SCTS_SIZE 14
 
+#define DEFAULT_REPLY_PATH 0b0 << 7
+#define DEFAULT_UDHI 0b0 << 6
+#define DEFAULT_SRR 0b0 << 5
+
+#define MISS_VP 0b00
+#define RESERV_VP 0b01
+#define RELATIVE_VP 0b10
+#define ABSOLUTE_VP 0b11
+
+#define DEFAULT_VPF RELATIVE_VP << 3
+#define DEFAULT_RD 0b0 << 2
+#define DEFAULT_MTI 0b01
+
+#define DEFAULT_PDU_TYPE DEFAULT_REPLY_PATH | DEFAULT_UDHI | DEFAULT_SRR | DEFAULT_VPF | DEFAULT_RD | DEFAULT_MTI
+
 typedef enum
 {
     NO_ERROR = 0,
@@ -134,7 +149,7 @@ typedef struct
 
     struct
     {
-        uint8_t size;
+        uint8_t size; // number count, if count not odd +1
         uint8_t type;
         uint8_t data[OA_MAX_LEN];
     } da; // Destination Address
@@ -156,9 +171,40 @@ typedef struct
 pdu_serialize_status serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size);
 
 
-// typedef struct
-// {
+typedef struct
+{
+    struct
+    {
+        /* data */
+        uint8_t size;
+        uint8_t addr[OA_MAX_LEN];
+    } dest_addr;
 
-// } submit_pocket;
+    struct
+    {
+        /* data */
+    } message;
+
+    uint8_t ttl; // Time to Live
+    
+} submit_pocket;
+
+typedef enum
+{
+    ___NO_ERROR = 0,
+    // WRONG_POCKET_SIZE = 1,
+    // WRONG_SCA_SIZE = 2,
+    // WRONG_OA_SIZE = 3,
+    // WRONG_UD_SIZE = 4
+} pdu_package_status;
+
+
+/**
+ * Упаковывает сообщение в Submit PDU структуру
+ * @param pocket структура содержащая сообщение
+ * @param pdu_pocket Submit PDU пакет
+ */
+pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocket *pdu_pocket);
+
 
 #endif

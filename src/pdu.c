@@ -340,6 +340,38 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
     return _NO_ERROR;
 }
 
+
+
+pdu_serialize_status serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size)
+{
+    
+}
+
+pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocket *pdu_pocket)
+{
+    // Clear pocket struct
+    memset(pdu_pocket, 0, sizeof(submit_pdu_pocket));
+
+    pdu_pocket->sca = 0x00; // If set 0x00, sca get from SIM
+    pdu_pocket->pdu_type = DEFAULT_PDU_TYPE;
+    pdu_pocket->mr = 0x00;
+
+    // Destination address
+    pdu_pocket->da.size = pocket->dest_addr.size;
+    
+    uint8_t buffer_size = pdu_pocket->da.size;
+    strncpy(pdu_pocket->da.data, pocket->dest_addr.addr, PDU_FRAME_STEP);
+
+    // is odd
+    if (!(pdu_pocket->da.size % 2))
+    {
+        //len -=1;
+    }
+
+    
+
+}
+
 #ifndef UNIT_TEST
 
 deliver_pdu_pocket pdu_pocket;
@@ -612,6 +644,23 @@ Test(decode_pdu_pocket, valid_7bit)
     // printf("%s\n", dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
+}
+
+void printBits(unsigned int num)
+{
+   for(int bit=0;bit<(sizeof(unsigned char) * 8); bit++)
+   {
+      printf("%i ", num & 0x01);
+      num = num >> 1;
+   }
+}
+
+
+Test(package_submit_pocket, generate_pdu_type)
+{
+    printBits(DEFAULT_PDU_TYPE);
+
+    cr_assert(true);
 }
 
 #endif
