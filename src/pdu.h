@@ -155,7 +155,7 @@ typedef struct
     } da; // Destination Address
 
     uint8_t pid; // Protocol ID
-    uint8_t dcs; // Data Coding Scheme
+    uint8_t dcs; // Data Coding Scheme 0x08 - normal mode, 0x18 - flash mode
     uint8_t vp[7]; // Validate Period
 
     uint8_t udl;

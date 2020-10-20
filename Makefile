@@ -2,8 +2,8 @@ PRJ_NAME=pdu
 CFLAGS +=-s -Os
 all: $(PRJ_NAME)
 
-test: 
-	$(CC) -o $(PRJ_NAME) src/$(PRJ_NAME).c $(CFLAGS) -DUNIT_TEST -lcriterion
+test:
+	$(CC) -o $(PRJ_NAME) src/encoder.c src/decoder.c src/tests.c -DUNIT_TEST -lcriterion
 	./$(PRJ_NAME)
 
 profile:
@@ -16,7 +16,7 @@ $(PRJ_NAME): $(PRJ_NAME).o
 	strip --strip-all ./$(PRJ_NAME)
 
 $(PRJ_NAME).o:
-	$(CC) -c -o $(PRJ_NAME).o src/$(PRJ_NAME).c $(CFLAGS)
+	$(CC) -c -o $(PRJ_NAME).o src/$(PRJ_NAME).c
 
 clean:
 	rm -rf *.o $(PRJ_NAME)
