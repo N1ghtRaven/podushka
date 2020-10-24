@@ -7,7 +7,7 @@
 deliver_pdu_pocket pocket;
 deliver_pocket dec_pocket;
 
-void dump_pocket(void)
+void dump_deviler_pocket(void)
 {
     printf(":: Service Center Address\n");
     printf("SCA Size - %d\n", pocket.TP_SCA.size);
@@ -28,6 +28,28 @@ void dump_pocket(void)
     printf(":: User Data\n");
     printf("UDL - %d\n", pocket.TP_UDL);
     printf("UD - %s\n", pocket.TP_UD);
+}
+
+void dump_submit_pocket(submit_pdu_pocket *pocket)
+{
+    printf(":: Service Center Address\n");
+    printf("SCA - %02x\n", pocket->sca);
+
+    printf("PDU Type - %02x\n\n", pocket->pdu_type);
+    printf("MR - %02x\n\n", pocket->mr);
+
+    printf(":: Destination Address\n");
+    printf("DA Size - %02x\n", pocket->da.size);
+    printf("DA Type - %02x\n", pocket->da.type);
+    printf("DA Data - %s\n\n", pocket->da.data);
+    
+    printf("PID - %02x\n", pocket->pid);
+    printf("DCS - %02x\n", pocket->dcs);
+    printf("VP - %02x\n\n", pocket->vp[0]);
+    
+    printf(":: User Data\n");
+    printf("UDL - %02x\n", pocket->udl);
+    printf("UD - %s\n", pocket->ud);
 }
 
 Test(deliver_pdu_parser, valid_string) //, .fini = dump_pocket
@@ -287,27 +309,62 @@ Test(package_submit_pocket, generate_pdu_type)
     //printBits(DEFAULT_PDU_TYPE);
 
     submit_pocket pocket = {0};
+    pocket.dest_addr.type = INTERANATIONAL_TYPE;
     pocket.dest_addr.size = 11;
     strncpy(pocket.dest_addr.addr, "79159826637", pocket.dest_addr.size);
+
+    pocket.message.mdcs = MDCS_7_BIT;
+    pocket.message.size = 15;
+    strncpy(pocket.message.data, "Hello, friend!", pocket.message.size);
+
+    pocket.ttl.scale = DAY;
+    pocket.ttl.value = 1;
 
     submit_pdu_pocket pdu_pocket = {0};
     package_submit_pocket(&pocket, &pdu_pocket);
 
     printf("%s", pdu_pocket.da.data);
 
+    dump_submit_pocket(&pdu_pocket);
+
+    // Add test
+    uint8_t pdu[PDU_MAX_LEN];
+    size_t size = serialize_submit_pocket(&pdu_pocket, &pdu, size);
+    printf("PDU: %s\n Size: %d", pdu, size);
 
     cr_assert(true);
 }
 
-Test(package_submit_pocket, encoder_test)
+Test(package_submit_pocket, encoder_ucs2_test)
 {
     //printBits(DEFAULT_PDU_TYPE);
 
-    uint8_t test_msg[14] = "Hello. friend!"; // 13
+    uint8_t test_msg[14] = "Привет, друг!"; // 13
     uint8_t test_msg2[50];
 
     gsm_encode_UCS2(&test_msg, 14, &test_msg2);
     printf(test_msg2);
+
+    cr_assert(true);
+}
+
+Test(package_submit_pocket, encoder_gsm7bit_test)
+{
+    int i;
+    char test_msg[] = "diafaan.com";
+    uint8_t result[128];
+    memset(result,0, sizeof(result));
+
+    size_t size = gsm_encode_7bit(test_msg, 12, result);
+	printf("7bit 2:");
+	for(i=0;i<size;i++)
+		printf(" %02x", result[i]);
+	printf("\n");
+		
+	printf("ascii 1:");
+	for(i=0;i<12;i++)
+		printf(" %02x", test_msg[i]);
+	printf("\n");
 
     cr_assert(true);
 }

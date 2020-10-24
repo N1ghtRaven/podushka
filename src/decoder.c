@@ -171,9 +171,9 @@ uint8_t num_to_ascii(uint8_t num)
  * @param output раскодированная строка
  * @return размер выходной строки
  */
-size_t gsm_decode_7bit(uint8_t *input, size_t size, uint8_t *output)
+uint8_t gsm_decode_7bit(uint8_t *input, size_t size, uint8_t *output)
 {
-    size_t output_size = 0;
+    uint8_t output_size = 0;
 
     uint16_t bit_buffer = 0;
     uint8_t bit_buffer_size = 0;

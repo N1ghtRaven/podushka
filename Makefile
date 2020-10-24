@@ -16,7 +16,10 @@ $(PRJ_NAME): $(PRJ_NAME).o
 	strip --strip-all ./$(PRJ_NAME)
 
 $(PRJ_NAME).o:
-	$(CC) -c -o $(PRJ_NAME).o src/$(PRJ_NAME).c
+	$(CC) -o $(PRJ_NAME).o src/encoder.c src/decoder.c src/main.c
+
+mvp:
+	$(CC) -o $(PRJ_NAME) src/main.c
 
 clean:
 	rm -rf *.o $(PRJ_NAME)

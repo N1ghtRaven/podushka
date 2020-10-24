@@ -168,25 +168,50 @@ typedef struct
  * @param output сериализованная строка
  * @param size размер сериализованной строки
  */
-pdu_serialize_status serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size);
+size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size);
 
+typedef enum
+{
+    INTERANATIONAL_TYPE = 0x91,
+    NATIVE_TYPE = 0x81
+} destination_num_type;
+
+typedef enum
+{
+    MDCS_7_BIT = 0x00,
+    MDCS_UCS2 = 0x08
+} message_data_scheme;
+
+typedef enum
+{
+    MINUTE,
+    HOUR,
+    DAY,
+    WEEK
+} ttl_scale;
 
 typedef struct
 {
     struct
     {
-        /* data */
+        destination_num_type type;
         uint8_t size;
         uint8_t addr[OA_MAX_LEN];
     } dest_addr;
 
     struct
     {
-        /* data */
+        message_data_scheme mdcs;
+        uint8_t size;
+        uint8_t data[UD_MAX_LEN];
     } message;
 
-    uint8_t ttl; // Time to Live
-    
+    struct
+    {
+        ttl_scale scale;
+        uint8_t value;
+    } ttl; // Time to Live!
+
 } submit_pocket;
 
 typedef enum
