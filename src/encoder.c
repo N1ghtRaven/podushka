@@ -2,13 +2,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size)
 {
     memset(output, 0, sizeof(uint8_t) * PDU_MAX_LEN);
-    
-    sprintf(
+    return sprintf(
             output,
             "%02x%02x%02x%02x%02x%s%02x%02x%02x%02x%s\0",
             pdu_pocket->sca,
@@ -23,21 +21,6 @@ size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, s
             pdu_pocket->udl,
             pdu_pocket->ud
         );
-
-    // for (uint16_t i = 0; i < PDU_MAX_LEN; i++)
-    // {
-    //     if (output[i] == '\0')
-    //     {
-    //         printf("i: %d\n", i);
-    //         printf("c: %c\n", output[i]);
-    //         size = i;
-    //         break;
-    //     }
-    // }
-
-    //size = strlen(output);
-
-    return strlen(output);
 }
 
 /**
@@ -99,7 +82,7 @@ uint16_t ascii_to_num(uint8_t *input, uint16_t size)
     {
         if ((input[i] >> 6) != 2)
         {
-            // Some error
+            //TODO: Some error
             return 0;
         }
 
@@ -138,9 +121,8 @@ size_t gsm_encode_UCS2(char * input, size_t size, uint8_t *output)
         uint16_t code = ascii_to_num(ascii, c_size);
         if (code > 0)
         {
-            sprintf(c, "%02x%02x", (code & 0xFF00) >> 8, code & 0xFF);
+            output_size += sprintf(c, "%02x%02x", (code & 0xFF00) >> 8, code & 0xFF);
             strcat(output, c);
-            output_size += 4;
         }
         k += c_size - 1;
     }

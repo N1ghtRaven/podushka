@@ -130,16 +130,6 @@ typedef struct
 pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pocket *pocket);
 
 
-typedef enum
-{
-    __NO_ERROR = 0,
-    // WRONG_POCKET_SIZE = 1,
-    // WRONG_SCA_SIZE = 2,
-    // WRONG_OA_SIZE = 3,
-    // WRONG_UD_SIZE = 4
-} pdu_serialize_status;
-
-
 typedef struct
 {
     uint8_t sca; // 0x00 default 
