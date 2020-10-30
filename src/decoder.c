@@ -1,4 +1,4 @@
-#include "pdu.h"
+#include "decoder.h"
 
 pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_pocket *pocket)
 {
@@ -14,69 +14,69 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
     uint8_t frame = 0;
 
     //Parse TP-SCA
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_SCA.size = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->SCA.size = (uint8_t) strtol(buffer, NULL, 16);
 
-    if (pocket->TP_SCA.size < SCA_MIN_LEN || pocket->TP_SCA.size > SCA_MAX_LEN)
+    if (pocket->SCA.size < SCA_MIN_LEN || pocket->SCA.size > SCA_MAX_LEN)
     {
         return WRONG_SCA_SIZE;
     }
 
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_SCA.type = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->SCA.type = (uint8_t) strtol(buffer, NULL, 16);
 
-    strncpy(pocket->TP_SCA.data, hex + frame, (pocket->TP_SCA.size - 1) * 2);
-    frame += (pocket->TP_SCA.size - 1) * 2;  
+    strncpy(pocket->SCA.data, hex + frame, (pocket->SCA.size - 1) * 2);
+    frame += (pocket->SCA.size - 1) * 2;  
 
     //Parse TP-MTI-CO
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_MTI_CO = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->PDU_TYPE = (uint8_t) strtol(buffer, NULL, 16);
 
     //Parse TP-OA
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_OA.size = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->OA.size = (uint8_t) strtol(buffer, NULL, 16);
 
-    if (pocket->TP_OA.size < OA_MIN_LEN || pocket->TP_OA.size > OA_MAX_LEN)
+    if (pocket->OA.size < OA_MIN_LEN || pocket->OA.size > OA_MAX_LEN)
     {
         return WRONG_OA_SIZE;
     }
 
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_OA.type = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->OA.type = (uint8_t) strtol(buffer, NULL, 16);
 
-    uint8_t real_oa_size = (pocket->TP_OA.size % 2) > 0 ? pocket->TP_OA.size + 1 : pocket->TP_OA.size;
-    strncpy(pocket->TP_OA.data, hex + frame, real_oa_size);
+    uint8_t real_oa_size = (pocket->OA.size % 2) > 0 ? pocket->OA.size + 1 : pocket->OA.size;
+    strncpy(pocket->OA.data, hex + frame, real_oa_size);
     frame += real_oa_size;
 
     //Parse TP-PID
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_PID = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->PID = (uint8_t) strtol(buffer, NULL, 16);
 
     //Parse TP-DCS
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_DCS = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->DCS = (uint8_t) strtol(buffer, NULL, 16);
 
     //Parse TP-SCTS
-    strncpy(pocket->TP_SCTS, hex + frame, TP_SCTS_SIZE);
-    frame += TP_SCTS_SIZE;
+    strncpy(pocket->SCTS, hex + frame, SCTS_SIZE);
+    frame += SCTS_SIZE;
 
     //Parse TP-UDL
-    strncpy(buffer, hex + frame, PDU_FRAME_STEP);
-    frame += PDU_FRAME_STEP;
-    pocket->TP_UDL = (uint8_t) strtol(buffer, NULL, 16);
+    strncpy(buffer, hex + frame, 2);
+    frame += 2;
+    pocket->UDL = (uint8_t) strtol(buffer, NULL, 16);
 
     //Parse TP-UD
-    strncpy(pocket->TP_UD, hex + frame, pocket->TP_UDL * 2);
-    frame += pocket->TP_UDL * 2;
+    strncpy(pocket->UD, hex + frame, pocket->UDL * 2);
+    frame += pocket->UDL * 2;
 
-    if (pocket->TP_UDL * 2 > UD_MAX_LEN)
+    if (pocket->UDL * 2 > UD_MAX_LEN)
     {
         return WRONG_UD_SIZE;
     }
@@ -85,38 +85,6 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
 }
 
 
-
-/**
- * TODO: Покрыть тестами
- * Меняет порядок байтов в цепочке
- * @param input_chain исходная цепочка байт
- * @param len длина цепочки
- * @param output_chain цепочка байт с измененным порядком
- * @return размер измененной цепочки
- */
-size_t switch_endianness(uint8_t *input_chain, size_t len, uint8_t *output_chain)
-{
-    if (len < 2)
-    {
-        return 0;
-    }
-
-    memset(output_chain, len, sizeof(uint8_t));
-
-    // is odd 
-    if (!(len % 2))
-    {
-        len -=1;
-    }
-
-    for (size_t i = 0; i < len; i += 2)
-    {
-        output_chain[i] = input_chain[i + 1];
-        output_chain[i + 1] = input_chain[i];
-    }
-
-    return len;
-}
 
 /**
  * Извлекает из ASCII символа (шеснадцатиричная СС) числовое значение
@@ -164,7 +132,6 @@ uint8_t num_to_ascii(uint8_t num)
 }
 
 /**
- * TODO Покрыть тестами
  * Декодер GSM 7-ми битной строки
  * @param input входная закодированная строка
  * @param size размер входной строки
@@ -181,10 +148,6 @@ uint8_t gsm_decode_7bit(uint8_t *input, size_t size, uint8_t *output)
     {
         // Convert char to num
         int16_t num = ( num_from_ascii(*(input++)) << 4 ) | num_from_ascii(*(input++));
-        if (num < 0)
-        {
-            return -1; // TODO: drop some error
-        }
 
         bit_buffer = (uint8_t) num << bit_buffer_size | bit_buffer;
         bit_buffer_size += 8;
@@ -261,17 +224,16 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
     size_t buffer_size = PDU_MAX_LEN;
     uint8_t buffer[buffer_size];
 
-    switch (pdu_pocket->TP_OA.type)
+    switch (pdu_pocket->OA.type)
     {
         case OA_7_BIT:
-            buffer_size = gsm_decode_7bit(pdu_pocket->TP_OA.data, pdu_pocket->TP_OA.size, &buffer);
+            buffer_size = gsm_decode_7bit(pdu_pocket->OA.data, pdu_pocket->OA.size, buffer);
             break;
         case OA_LITTLE_ENDIAN_NUMBER: //TODO: Testing
-            buffer_size = pdu_pocket->TP_OA.size;
-            switch_endianness(pdu_pocket->TP_OA.data, pdu_pocket->TP_OA.size, &buffer);
+            buffer_size = pdu_pocket->OA.size;
+            switch_endianness(pdu_pocket->OA.data, pdu_pocket->OA.size, buffer);
             break;
         default:
-            // Why drop???
             return WRONG_OA_TYPE;    
     }
 
@@ -282,13 +244,13 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
     buffer_size = UD_MAX_LEN;
     memset(buffer, '\0', buffer_size * sizeof(uint8_t));
 
-    switch (pdu_pocket->TP_DCS)
+    switch (pdu_pocket->DCS)
     {
         case DCS_7_BIT:
-            buffer_size = gsm_decode_7bit(pdu_pocket->TP_UD, pdu_pocket->TP_UDL, &buffer);
+            buffer_size = gsm_decode_7bit(pdu_pocket->UD, pdu_pocket->UDL, buffer);
             break;
         case DCS_UCS2:
-            buffer_size = gsm_decode_UCS2(pdu_pocket->TP_UD, (pdu_pocket->TP_UDL * 2) + 1, &buffer);
+            buffer_size = gsm_decode_UCS2(pdu_pocket->UD, (pdu_pocket->UDL * 2) + 1, buffer);
             break;
     }
 
@@ -297,38 +259,38 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
 
     // Decode Timestamp
     struct tm timestamp = {};
-    char tm_buffer[PDU_FRAME_STEP];
+    char tm_buffer[2];
     uint8_t tm_frame = 0;
     
-    buffer_size = TP_SCTS_SIZE;
-    switch_endianness(pdu_pocket->TP_SCTS, TP_SCTS_SIZE, &buffer); 
+    buffer_size = SCTS_SIZE;
+    switch_endianness(pdu_pocket->SCTS, SCTS_SIZE, buffer); 
 
     // Year
-    strncpy(tm_buffer, buffer, PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer, 2);
     timestamp.tm_year = strtol(tm_buffer, NULL, 10) + 100;
 
     // Month
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     timestamp.tm_mon = strtol(tm_buffer, NULL, 10) - 1;
     
     // Day
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     timestamp.tm_mday = strtol(tm_buffer, NULL, 10);
 
     // Hour
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     timestamp.tm_hour = strtol(tm_buffer, NULL, 10);
 
     // Minute
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     timestamp.tm_min = strtol(tm_buffer, NULL, 10);
 
     // Sec
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     timestamp.tm_sec = strtol(tm_buffer, NULL, 10);
     
     // TimeZone
-    strncpy(tm_buffer, buffer + (tm_frame += PDU_FRAME_STEP), PDU_FRAME_STEP);
+    strncpy(tm_buffer, buffer + (tm_frame += 2), 2);
     pocket->time.timezone = (int8_t) strtol(tm_buffer, NULL, 10) / 4;
     pocket->time.timestamp = mktime(&timestamp);
    

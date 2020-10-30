@@ -1,22 +1,32 @@
 PRJ_NAME=pdu
 CFLAGS +=-s -Os
+
 all: $(PRJ_NAME)
 
-test:
-	$(CC) -o $(PRJ_NAME) src/encoder.c src/decoder.c src/tests.c -DUNIT_TEST -lcriterion
-	./$(PRJ_NAME)
+test: decoder_test encoder_test
+
+decoder_test: decoder.o util.o
+	$(CC) -o exe/decoder_test obj/decoder.o obj/util.o test/decoder_test.c -lcriterion
+	./exe/decoder_test
+
+decoder.o:
+	$(CC) -c src/decoder.c -o obj/decoder.o
+
+
+encoder_test: encoder.o util.o
+	$(CC) -o exe/encoder_test obj/encoder.o obj/util.o test/encoder_test.c -lcriterion
+	./exe/encoder_test
+
+encoder.o:
+	$(CC) -c src/encoder.c -o obj/encoder.o
+
+util.o:
+	$(CC) -c src/util.c -o obj/util.o
 
 profile:
 	$(CC) -pg -Wall -o $(PRJ_NAME) src/$(PRJ_NAME).c
 	./$(PRJ_NAME) > /dev/null
 	gprof ./$(PRJ_NAME)
-
-$(PRJ_NAME): $(PRJ_NAME).o
-	$(CC) -o $(PRJ_NAME) $(PRJ_NAME).o $(CFLAGS)
-	strip --strip-all ./$(PRJ_NAME)
-
-$(PRJ_NAME).o:
-	$(CC) -o $(PRJ_NAME).o src/encoder.c src/decoder.c src/main.c
 
 mvp:
 	$(CC) -o $(PRJ_NAME) src/main.c

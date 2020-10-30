@@ -1,11 +1,9 @@
-#include "pdu.h"
+#include "encoder.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 
 size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, size_t *size)
 {
-    memset(output, 0, sizeof(uint8_t) * PDU_MAX_LEN);
+    memset(output, 0, sizeof(uint8_t) * SUBMIT_PDU_MAX_SIZE);
     return sprintf(
             output,
             "%02x%02x%02x%02x%02x%s%02x%02x%02x%02x%s\0",
@@ -17,7 +15,7 @@ size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, s
             pdu_pocket->da.data,
             pdu_pocket->pid,
             pdu_pocket->dcs,
-            pdu_pocket->vp[0], //FIXME:
+            pdu_pocket->vp,
             pdu_pocket->udl,
             pdu_pocket->ud
         );
@@ -136,17 +134,17 @@ pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocke
     // Clear pocket struct
     memset(pdu_pocket, 0, sizeof(submit_pdu_pocket));
 
-    pdu_pocket->sca = 0x00; // If set 0x00, sca get from SIM
+    pdu_pocket->sca = 0x00; // get from SIM
     pdu_pocket->pdu_type = DEFAULT_PDU_TYPE;
     pdu_pocket->mr = 0x00;
 
     // Destination address
-    pdu_pocket->da.size = pocket->dest_addr.size;
-    pdu_pocket->da.type = pocket->dest_addr.type; 
+    pdu_pocket->da.size = pocket->destination.size;
+    pdu_pocket->da.type = pocket->destination.type; 
     
-    uint8_t buffer_size = pocket->dest_addr.size;
-    uint8_t buffer[OA_MAX_LEN] = {0};
-    strncpy(buffer, pocket->dest_addr.addr, buffer_size);
+    uint8_t buffer_size = pocket->destination.size;
+    uint8_t buffer[DA_MAX_LEN] = {0};
+    strncpy(buffer, pocket->destination.addr, buffer_size);
 
     // is odd
     if (buffer_size % 2)
@@ -154,7 +152,7 @@ pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocke
         buffer[buffer_size++] = 'F';
     }
 
-    switch_endianness(buffer, buffer_size, pdu_pocket->da.data);
+    switch_endianness(buffer, buffer_size, pdu_pocket->da.data); //?&
 
     pdu_pocket->pid = 0x00;
     pdu_pocket->dcs = pocket->message.mdcs;
@@ -168,30 +166,33 @@ pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocke
             pdu_pocket->udl = gsm_encode_UCS2(pocket->message.data, pocket->message.size, pdu_pocket->ud);
             break;
         default:
-            //Some error
-            return -1;              
+            return WRONG_DATA_SCHEME;              
     }
 
-    memset(pdu_pocket->vp, 0, sizeof(uint8_t) * 7); // TODO: Implement me //Extract from pdu type
+    memset(&pdu_pocket->vp, 0, sizeof(uint8_t) * 7); // TODO: Extract from pdu type
     switch (pocket->ttl.scale)
     {
-        case MINUTE: // MAX 12 hour min 5 min)
-            pdu_pocket->vp[0] = (pocket->ttl.value / 5) - 1;
+        case MINUTE:
+            // MAX 12 hour min 5 min
+            pdu_pocket->vp = (pocket->ttl.value / 5) - 1;
             break;
-        case HOUR: // MIN 12 hour max 24
-            pdu_pocket->vp[0] = ((pocket->ttl.value * 60 - 720) / 30) + 143;
+        case HOUR:
+            // MIN 12 hour max 24
+            pdu_pocket->vp = ((pocket->ttl.value * 60 - 720) / 30) + 143;
             break;
-        case DAY: // Min 1 day max 30
-            pdu_pocket->vp[0] = pocket->ttl.value + 166;
+        case DAY:
+            // Min 1 day max 30
+            pdu_pocket->vp = pocket->ttl.value + 166;
             break;
-        case WEEK: // Min 1 week max 63
-            pdu_pocket->vp[0] = pocket->ttl.value + 192;
+        case WEEK:
+            // Min 1 week max 63
+            pdu_pocket->vp = pocket->ttl.value + 192;
             break;
         default:
-            // Some error
-            return -2; 
+            // 5 min
+            pdu_pocket->vp = 0;
+            return WRONG_VP_SCALE; 
     }
 
-    // Return OK
-    return 0; 
+    return NO_ERROR; 
 }

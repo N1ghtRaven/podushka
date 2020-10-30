@@ -1,55 +1,34 @@
-#ifdef UNIT_TEST
 #include <criterion/criterion.h>
 #include <locale.h>
 #include <stdio.h>
-#include "pdu.h"
+#include "../src/decoder.h"
+// #include "../src/util.h"
 
 deliver_pdu_pocket pocket;
 deliver_pocket dec_pocket;
 
+
 void dump_deviler_pocket(void)
 {
     printf(":: Service Center Address\n");
-    printf("SCA Size - %d\n", pocket.TP_SCA.size);
-    printf("SCA Type - %d\n", pocket.TP_SCA.type);
-    printf("SCA Data - %s\n\n", pocket.TP_SCA.data);
+    printf("SCA Size - %d\n", pocket.SCA.size);
+    printf("SCA Type - %d\n", pocket.SCA.type);
+    printf("SCA Data - %s\n\n", pocket.SCA.data);
 
-    printf("MTI_CO - %d\n\n", pocket.TP_MTI_CO);
+    printf("MTI_CO - %d\n\n", pocket.PDU_TYPE);
     
     printf(":: Originator Address\n");
-    printf("OA Size - %d\n", pocket.TP_OA.size);
-    printf("OA Type - %d\n", pocket.TP_OA.type);
-    printf("OA Data - %s\n\n", pocket.TP_OA.data);
+    printf("OA Size - %d\n", pocket.OA.size);
+    printf("OA Type - %d\n", pocket.OA.type);
+    printf("OA Data - %s\n\n", pocket.OA.data);
     
-    printf("PID - %d\n", pocket.TP_PID);
-    printf("DCS - %d\n", pocket.TP_DCS);
-    printf("SCTS - %s\n\n", pocket.TP_SCTS);
-    
-    printf(":: User Data\n");
-    printf("UDL - %d\n", pocket.TP_UDL);
-    printf("UD - %s\n", pocket.TP_UD);
-}
-
-void dump_submit_pocket(submit_pdu_pocket *pocket)
-{
-    printf(":: Service Center Address\n");
-    printf("SCA - %02x\n", pocket->sca);
-
-    printf("PDU Type - %02x\n\n", pocket->pdu_type);
-    printf("MR - %02x\n\n", pocket->mr);
-
-    printf(":: Destination Address\n");
-    printf("DA Size - %02x\n", pocket->da.size);
-    printf("DA Type - %02x\n", pocket->da.type);
-    printf("DA Data - %s\n\n", pocket->da.data);
-    
-    printf("PID - %02x\n", pocket->pid);
-    printf("DCS - %02x\n", pocket->dcs);
-    printf("VP - %02x\n\n", pocket->vp[0]);
+    printf("PID - %d\n", pocket.PID);
+    printf("DCS - %d\n", pocket.DCS);
+    printf("SCTS - %s\n\n", pocket.SCTS);
     
     printf(":: User Data\n");
-    printf("UDL - %02x\n", pocket->udl);
-    printf("UD - %s\n", pocket->ud);
+    printf("UDL - %d\n", pocket.UDL);
+    printf("UD - %s\n", pocket.UD);
 }
 
 Test(deliver_pdu_parser, valid_string) //, .fini = dump_pocket
@@ -58,7 +37,6 @@ Test(deliver_pdu_parser, valid_string) //, .fini = dump_pocket
     size_t size = 275;
     
     pdu_parse_status st = parse_deliver_pocket(hex_pocket, size, &pocket);
-
     cr_assert(NO_ERROR == st, "Expect %d, but recieve %d", NO_ERROR, st);
 }
 
@@ -179,26 +157,23 @@ Test(deliver_pdu_parser, junk) // .init = setup, .fini = dump_pocket
 
 Test(switch_endianness, valid)
 {
-    // const char* valid = "000102030405060708090A0B0C0D0E0F";
-    // char* raw = "00102030405060708090A0B0C0D0E0F0";
+    char* valid = "000102030405060708090A0B0C0D0E0F";
+    char* raw = "00102030405060708090A0B0C0D0E0F0";
+    size_t raw_size = 33;
 
-    const char* valid = "01020304";
-    const char* raw = "10203040";
-    size_t raw_size = 8;
-
-    const char* result[raw_size];
-    switch_endianness(raw, raw_size, &result);
+    char result[raw_size];
+    switch_endianness(raw, raw_size, result);
     
-    cr_assert(!strncmp(valid, result, raw_size), "Except %s, but recieve %s",valid,result);
+    cr_assert(!strncmp(valid, result, raw_size), "Except %s, but recieve %s", valid, result);
 }
 
 Test(switch_endianness, wrong_size)
 {
-    const char* raw = "0";
+    char* raw = "0";
     size_t raw_size = 1;
 
-    const char* result[raw_size];
-    size_t new_size = switch_endianness(raw, raw_size, &result);
+    char* result;
+    size_t new_size = switch_endianness(raw, raw_size, result);
     
     cr_assert(!new_size, "Except %d, but recieve %s",0,new_size);
 }
@@ -237,6 +212,18 @@ Test(num_from_ascii, wrong_data)
     cr_assert(data == -1);
 }
 
+Test(gsm_decode_7bit, valid)
+{
+    const uint8_t *sample = "E474D81C0EBB5DE3771B";
+    const uint8_t *valid = "diafaan.com";
+
+    uint8_t result[21] = {0};
+    gsm_decode_7bit(sample, 21, result);
+
+    cr_assert(!strncmp(valid, result, 12), "Except %s, but recieve %s",valid,result);
+}
+
+// TODO: More Tests 
 Test(decode_pdu_pocket, valid_UCS2)
 {
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
@@ -244,9 +231,6 @@ Test(decode_pdu_pocket, valid_UCS2)
     
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
-
-    // printf("%s\n", dec_pocket.sender.data);
-    // printf("%ld: %s\n", dec_pocket.time.timestamp, dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
 }
@@ -261,112 +245,5 @@ Test(decode_pdu_pocket, valid_7bit)
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
-    // printf("%ld - %s\n", dec_pocket.time.timestamp, dec_pocket.sender.data);
-    // printf("%s\n", dec_pocket.message.data);
-
     cr_assert(!dst, "%d", dst);
 }
-
-void printBits(unsigned int num)
-{
-   for(int bit=0;bit<(sizeof(unsigned char) * 8); bit++)
-   {
-      printf("%i ", num & 0x01);
-      num = num >> 1;
-   }
-}
-
-Test(is_odd, odd)
-{
-    uint8_t num = 11;
-    if ((num % 2))
-    {
-        cr_assert(true);
-    }
-    else
-    {
-        cr_assert(false);
-    }
-    
-}
-
-// Test(is_odd, nodd)
-// {
-//     uint8_t num = 12;
-//     if (!(num % 2))
-//     {
-//         cr_assert(true);
-//     }
-//     else
-//     {
-//         cr_assert(false);
-//     }
-    
-// }
-
-Test(package_submit_pocket, generate_pdu_type)
-{
-    //printBits(DEFAULT_PDU_TYPE);
-
-    submit_pocket pocket = {0};
-    pocket.dest_addr.type = INTERANATIONAL_TYPE;
-    pocket.dest_addr.size = 11;
-    strncpy(pocket.dest_addr.addr, "79159826637", pocket.dest_addr.size);
-
-    pocket.message.mdcs = MDCS_7_BIT;
-    pocket.message.size = 15;
-    strncpy(pocket.message.data, "Hello, friend!", pocket.message.size);
-
-    pocket.ttl.scale = DAY;
-    pocket.ttl.value = 1;
-
-    submit_pdu_pocket pdu_pocket = {0};
-    package_submit_pocket(&pocket, &pdu_pocket);
-
-    printf("%s", pdu_pocket.da.data);
-
-    dump_submit_pocket(&pdu_pocket);
-
-    // Add test
-    uint8_t pdu[PDU_MAX_LEN];
-    size_t size = serialize_submit_pocket(&pdu_pocket, &pdu, size);
-    printf("PDU: %s\n Size: %d", pdu, size);
-
-    cr_assert(true);
-}
-
-Test(package_submit_pocket, encoder_ucs2_test)
-{
-    //printBits(DEFAULT_PDU_TYPE);
-
-    uint8_t test_msg[14] = "Привет, друг!"; // 13
-    uint8_t test_msg2[50];
-
-    gsm_encode_UCS2(&test_msg, 14, &test_msg2);
-    printf(test_msg2);
-
-    cr_assert(true);
-}
-
-Test(package_submit_pocket, encoder_gsm7bit_test)
-{
-    int i;
-    char test_msg[] = "diafaan.com";
-    uint8_t result[128];
-    memset(result,0, sizeof(result));
-
-    size_t size = gsm_encode_7bit(test_msg, 12, result);
-	printf("7bit 2:");
-	for(i=0;i<size;i++)
-		printf(" %02x", result[i]);
-	printf("\n");
-		
-	printf("ascii 1:");
-	for(i=0;i<12;i++)
-		printf(" %02x", test_msg[i]);
-	printf("\n");
-
-    cr_assert(true);
-}
-
-#endif
