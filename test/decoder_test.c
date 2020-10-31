@@ -2,44 +2,37 @@
 #include <locale.h>
 #include <stdio.h>
 #include "../src/decoder.h"
-// todo: rewrie test
-// ----] test/decoder_test.c:138: Assertion failed: Expect 4, but recieve 2
-// [FAIL] deliver_pdu_parser::ud_size: (0,00s)
-// [====] Synthesis: Tested: 16 | Passing: 15 | Failing: 1 | Crashing: 0 
-// make: *** [Makefile:10: decoder_test] Ошибка 1
-
-deliver_pdu_pocket pocket = {0};
-deliver_pocket dec_pocket;
 
 
-void dump_deviler_pocket(void)
+void dump_deviler_pocket(deliver_pdu_pocket *pocket)
 {
     printf(":: Service Center Address\n");
-    printf("SCA Size - %d\n", pocket.SCA.size);
-    printf("SCA Type - %d\n", pocket.SCA.type);
-    printf("SCA Data - %s\n\n", pocket.SCA.data);
+    printf("SCA Size - %d\n", pocket->SCA.size);
+    printf("SCA Type - %d\n", pocket->SCA.type);
+    printf("SCA Data - %s\n\n", pocket->SCA.data);
 
-    printf("MTI_CO - %d\n\n", pocket.PDU_TYPE);
+    printf("MTI_CO - %d\n\n", pocket->PDU_TYPE);
     
     printf(":: Originator Address\n");
-    printf("OA Size - %d\n", pocket.OA.size);
-    printf("OA Type - %d\n", pocket.OA.type);
-    printf("OA Data - %s\n\n", pocket.OA.data);
+    printf("OA Size - %d\n", pocket->OA.size);
+    printf("OA Type - %d\n", pocket->OA.type);
+    printf("OA Data - %s\n\n", pocket->OA.data);
     
-    printf("PID - %d\n", pocket.PID);
-    printf("DCS - %d\n", pocket.DCS);
-    printf("SCTS - %s\n\n", pocket.SCTS);
+    printf("PID - %d\n", pocket->PID);
+    printf("DCS - %d\n", pocket->DCS);
+    printf("SCTS - %s\n\n", pocket->SCTS);
     
     printf(":: User Data\n");
-    printf("UDL - %d\n", pocket.UDL);
-    printf("UD - %s\n", pocket.UD);
+    printf("UDL - %d\n", pocket->UDL);
+    printf("UD - %s\n", pocket->UD);
 }
 
-Test(deliver_pdu_parser, valid_string) //, .fini = dump_pocket
+Test(deliver_pdu_parser, valid_string)
 {
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
     size_t size = 275;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(hex_pocket, size, &pocket);
     cr_assert(NO_ERROR == st, "Expect %d, but recieve %d", NO_ERROR, st);
 }
@@ -55,6 +48,7 @@ Test(deliver_pdu_parser, big_pocket_size)
         junk[i] = rand() % 255;
     }
 
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     cr_assert(WRONG_POCKET_SIZE == st, "Expect %d, but recieve %d", WRONG_POCKET_SIZE, st);
 }
@@ -70,6 +64,7 @@ Test(deliver_pdu_parser, little_pocket_size)
         junk[i] = rand() % 255;
     }
 
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     cr_assert(WRONG_POCKET_SIZE == st, "Expect %d, but recieve %d", WRONG_POCKET_SIZE, st);
 }
@@ -87,6 +82,7 @@ Test(deliver_pdu_parser, big_sca_size)
         junk[i] = rand() % 255;
     }
 
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     cr_assert(WRONG_SCA_SIZE == st, "Expect %d, but recieve %d", WRONG_SCA_SIZE, st);
 }
@@ -104,6 +100,7 @@ Test(deliver_pdu_parser, little_sca_size)
         junk[i] = rand() % 255;
     }
 
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     cr_assert(WRONG_SCA_SIZE == st, "Expect %d, but recieve %d", WRONG_SCA_SIZE, st);
 }
@@ -114,6 +111,7 @@ Test(deliver_pdu_parser, big_oa_size)
     char* hex_pocket = "07919761980614F82FF9846516165465465464654";
     size_t size = 42;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(hex_pocket, size, &pocket);
     
 
@@ -126,11 +124,13 @@ Test(deliver_pdu_parser, little_oa_size)
     char* hex_pocket = "07919761980614F82019846516165465465464654";
     size_t size = 42;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(hex_pocket, size, &pocket);
     
 
     cr_assert(WRONG_OA_SIZE == st, "Expect %d, but recieve %d", WRONG_OA_SIZE, st);
 }
+
 
 Test(deliver_pdu_parser, ud_size)
 {
@@ -138,7 +138,9 @@ Test(deliver_pdu_parser, ud_size)
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E000802207081743228D8459646498455654";
     size_t size = 77;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(hex_pocket, size, &pocket);
+    
     cr_assert(WRONG_UD_SIZE == st, "Expect %d, but recieve %d", WRONG_UD_SIZE, st);
 }
 
@@ -154,6 +156,7 @@ Test(deliver_pdu_parser, junk) // .init = setup, .fini = dump_pocket
         junk[i] = rand() % 255;
     }
 
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
     // "Expect %d, but recieve %d", WRONG_UD_SIZE, st printf("%d\n",st);
     cr_assert(st);
@@ -233,7 +236,10 @@ Test(decode_pdu_pocket, valid_UCS2)
     char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
     size_t size = 275;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
+    
+    deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
     cr_assert(!dst, "%d", dst);
@@ -246,7 +252,10 @@ Test(decode_pdu_pocket, valid_7bit)
     char* hex_pocket = "0791448720003023240DD0E474D81C0EBB010000111011315214000BE474D81C0EBB5DE3771B";
     size_t size = 76;
     
+    deliver_pdu_pocket pocket = {0};
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
+    
+    deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
     cr_assert(!dst, "%d", dst);

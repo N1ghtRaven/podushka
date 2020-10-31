@@ -10,8 +10,9 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
     // Clear pocket struct
     memset(pocket, 0, sizeof(deliver_pdu_pocket));
 
-    uint8_t buffer[size];
     uint8_t frame = 0;
+    uint8_t buffer[UD_MAX_LEN];
+    memset(buffer, 0, sizeof(uint8_t) * UD_MAX_LEN);
 
     //Parse TP-SCA
     strncpy(buffer, hex + frame, 2);
@@ -20,7 +21,6 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
 
     if (pocket->SCA.size < SCA_MIN_LEN || pocket->SCA.size > SCA_MAX_LEN)
     {
-        printf("SCA pocket size %d\n", pocket->SCA.size );
         return WRONG_SCA_SIZE;
     }
 
@@ -73,14 +73,14 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
     frame += 2;
     pocket->UDL = (uint8_t) strtol(buffer, NULL, 16);
 
-    //Parse TP-UD
-    strncpy(pocket->UD, hex + frame, pocket->UDL * 2);
-    frame += pocket->UDL * 2;
-
     if (pocket->UDL * 2 > UD_MAX_LEN)
     {
         return WRONG_UD_SIZE;
     }
+
+    //Parse TP-UD
+    strncpy(pocket->UD, hex + frame, pocket->UDL * 2);
+    frame += pocket->UDL * 2;
 
     return NO_ERROR;
 }
