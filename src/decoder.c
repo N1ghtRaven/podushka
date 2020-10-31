@@ -20,6 +20,7 @@ pdu_parse_status parse_deliver_pocket(uint8_t *hex, size_t size, deliver_pdu_poc
 
     if (pocket->SCA.size < SCA_MIN_LEN || pocket->SCA.size > SCA_MAX_LEN)
     {
+        printf("SCA pocket size %d\n", pocket->SCA.size );
         return WRONG_SCA_SIZE;
     }
 

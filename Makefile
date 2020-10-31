@@ -20,16 +20,9 @@ encoder_test: encoder.o util.o
 encoder.o:
 	$(CC) -c src/encoder.c -o obj/encoder.o
 
+
 util.o:
 	$(CC) -c src/util.c -o obj/util.o
-
-profile:
-	$(CC) -pg -Wall -o $(PRJ_NAME) src/$(PRJ_NAME).c
-	./$(PRJ_NAME) > /dev/null
-	gprof ./$(PRJ_NAME)
-
-mvp:
-	$(CC) -o $(PRJ_NAME) src/main.c
 
 clean:
 	rm -rf *.o $(PRJ_NAME)

@@ -1,6 +1,7 @@
 #ifndef _DECODER_h_
 #define _DECODER_h_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

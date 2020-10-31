@@ -2,9 +2,13 @@
 #include <locale.h>
 #include <stdio.h>
 #include "../src/decoder.h"
-// #include "../src/util.h"
+// todo: rewrie test
+// ----] test/decoder_test.c:138: Assertion failed: Expect 4, but recieve 2
+// [FAIL] deliver_pdu_parser::ud_size: (0,00s)
+// [====] Synthesis: Tested: 16 | Passing: 15 | Failing: 1 | Crashing: 0 
+// make: *** [Makefile:10: decoder_test] Ошибка 1
 
-deliver_pdu_pocket pocket;
+deliver_pdu_pocket pocket = {0};
 deliver_pocket dec_pocket;
 
 
