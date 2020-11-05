@@ -49,7 +49,7 @@ Test(switch_endianness, wrong_size)
     cr_assert(!new_size, "Except %d, but recieve %s",0,new_size);
 }
 
-Test(package_submit_pocket, generate_pdu_type)
+Test(package_submit_pocket, generate_7bit_pdu_type)
 {
     submit_pocket pocket = {0};
     pocket.destination.type = INTERANATIONAL_TYPE;
@@ -64,48 +64,77 @@ Test(package_submit_pocket, generate_pdu_type)
     pocket.ttl.value = 1;
 
     submit_pdu_pocket pdu_pocket = {0};
-    package_submit_pocket(&pocket, &pdu_pocket);
+    uint8_t st = package_submit_pocket(&pocket, &pdu_pocket);
 
-    // printf("%s", pdu_pocket.da.data);
+    if (st != NO_ERROR)
+    {
+        dump_submit_pocket(&pdu_pocket);
+        cr_assert(false, "Expect %d, but recieve %d", NO_ERROR, st);
+    }
 
-    // dump_submit_pocket(&pdu_pocket);
-
-    // Add test
+    // TODO: Add decode test
     uint8_t pdu[SUBMIT_PDU_MAX_SIZE];
     size_t size = serialize_submit_pocket(&pdu_pocket, pdu, &size);
-    // printf("PDU: %s\n Size: %d", pdu, size);
+    // printf(":: 7bit GSM\nPDU: %s\nSize: %d\n", pdu, size);
+
+    cr_assert(true);
+}
+
+Test(package_submit_pocket, generate_ucs2_pdu_type)
+{
+    submit_pocket pocket = {0};
+    pocket.destination.type = INTERANATIONAL_TYPE;
+    pocket.destination.size = 11;
+    strncpy(pocket.destination.addr, "79147851125", pocket.destination.size);
+
+    pocket.message.mdcs = MDCS_UCS2;
+    pocket.message.size = 24;
+    strncpy(pocket.message.data, "Привет, друг!", pocket.message.size);
+
+    pocket.ttl.scale = DAY;
+    pocket.ttl.value = 1;
+
+    submit_pdu_pocket pdu_pocket = {0};
+    uint8_t st = package_submit_pocket(&pocket, &pdu_pocket);
+
+    if (st != NO_ERROR)
+    {
+        dump_submit_pocket(&pdu_pocket);
+        cr_assert(false, "Expect %d, but recieve %d", NO_ERROR, st);
+    }
+
+    // TODO: Add decode test
+    uint8_t pdu[SUBMIT_PDU_MAX_SIZE];
+    size_t size = serialize_submit_pocket(&pdu_pocket, pdu, &size);
+    // printf(":: USC2\nPDU: %s\nSize: %d\n", pdu, size);
 
     cr_assert(true);
 }
 
 Test(package_submit_pocket, encoder_ucs2_test)
 {
-    uint8_t test_msg[28] = "Привет, друг!"; // 13
-    uint8_t test_msg2[50];
+    uint8_t input_msg[28] = "Привет, друг!";
+    uint8_t valid_msg[53] = "041f04400438043204350442002c002004340440044304330021";
+    
+    uint8_t output_msg[100];
+    size_t output_size = gsm_encode_UCS2(&input_msg, 28, &output_msg);
+    
+    if (output_size != 53)
+    {
+        cr_assert(false, "Wrong size. Expect %d, but recieve %d", 53, output_size);
+    }
 
-    gsm_encode_UCS2(&test_msg, 28, &test_msg2); // Test me
-    // printf(test_msg2);
-
-    cr_assert(true);
+    cr_assert(!strncmp(valid_msg, output_msg, output_size));
 }
 
 Test(package_submit_pocket, encoder_gsm7bit_test)
 {
-    int i;
-    char test_msg[] = "diafaan.com";
-    uint8_t result[128];
-    memset(result,0, sizeof(result));
+    char input_msg[15] = "Hello, friend!";
+    uint8_t valid_msg[] = "c8329bfd6681ccf274d94d0e01";
+                                                  
+    uint8_t output_msg[128];
+    memset(output_msg, 0, sizeof(output_msg));
 
-    size_t size = gsm_encode_7bit(test_msg, 12, result);
-	// printf("7bit 2:");
-	// for(i=0;i<size;i++)
-	// 	printf(" %02x", result[i]);
-	// printf("\n");
-		
-	// printf("ascii 1:");
-	// for(i=0;i<12;i++)
-	// 	printf(" %02x", test_msg[i]);
-	// printf("\n");
-
-    cr_assert(true);
+    size_t size = gsm_encode_7bit(input_msg, 15, output_msg);
+    cr_assert(!strncmp(valid_msg, output_msg, size), "Expect %s, but recieve %s", valid_msg, output_msg);
 }

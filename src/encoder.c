@@ -33,21 +33,22 @@ size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, s
  */
 uint8_t gsm_encode_7bit(uint8_t *input, size_t size, uint8_t *output)
 {
-    uint8_t buffer[(size * 7) / 8];
-    for(uint8_t i = 0; i < size * 7; i++)
+    uint8_t buffer[size * 7];
+    memset(buffer, 0, sizeof(buffer));
+	for(uint8_t i = 0; i < size * 7; i++)
 	{
 		uint8_t b = (input[i / 7] & (1 << i % 7)) == (1 << i % 7);
-        buffer[i / 8] |= (b << i % 8);
+		buffer[i / 8] |= (b << i % 8);
 	}
 
-    char c[2] = {0};
+    char c[2];
     for(uint8_t i = 0; i < (size * 7) / 8; i++)
     {
         sprintf(c, "%02x", buffer[i]);
         strcat(output, c);
     }
 
-    return ((size * 7) / 8);
+    return (size * 7) / 8;
 }
 
 uint16_t size_from_char(uint8_t b)
@@ -169,7 +170,6 @@ pdu_package_status package_submit_pocket(submit_pocket *pocket, submit_pdu_pocke
             return WRONG_DATA_SCHEME;              
     }
 
-    memset(&pdu_pocket->vp, 0, sizeof(uint8_t) * 7); // TODO: Extract from pdu type
     switch (pocket->ttl.scale)
     {
         case MINUTE:
