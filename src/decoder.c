@@ -165,6 +165,7 @@ uint8_t gsm_decode_7bit(uint8_t *input, size_t size, uint8_t *output)
 
 /**
  * Декодер UCS2 строки
+ * TODO: Тесты
  * @param input входная строка
  * @param size размер входной строки
  * @param output раскодированная строка
@@ -209,6 +210,8 @@ size_t gsm_decode_UCS2(uint8_t *input, size_t size, uint8_t *output)
             c[3] = (char) (0x80 | (code & 0x3F));
             c[4] = 0;
         }
+
+        // printf("%d ", c);
         strcat(output, c);             
     }
 

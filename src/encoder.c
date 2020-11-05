@@ -24,8 +24,7 @@ size_t serialize_submit_pocket(submit_pdu_pocket *pdu_pocket, uint8_t *output, s
 /**
  * https://github.com/vbs100/gsm7bit/blob/master/gsm7bit.c
  * https://github.com/RiccardoSottini/7bit_encoding
- * TODO Покрыть тестами
- * Энкодер GSM 7-ми битной строки
+ * Кодировщик UTF8 -> GSM 7-ми битную строку
  * @param input входная ascii строка
  * @param size размер ascii строки
  * @param output gsm7bit строка
@@ -48,7 +47,7 @@ uint8_t gsm_encode_7bit(uint8_t *input, size_t size, uint8_t *output)
         strcat(output, c);
     }
 
-    return (size * 7) / 8;
+    return (size * 7) * 2 / 8 + 1;
 }
 
 uint16_t size_from_char(uint8_t b)
@@ -81,7 +80,7 @@ uint16_t ascii_to_num(uint8_t *input, uint16_t size)
     {
         if ((input[i] >> 6) != 2)
         {
-            //TODO: Some error
+            // This some error
             return 0;
         }
 
@@ -94,12 +93,11 @@ uint16_t ascii_to_num(uint8_t *input, uint16_t size)
 
 /**
  * https://github.com/smoothwind/ucs2-utf8
- * TODO: Покрыть тестами
- * Кодировщик UCS2 -> UTF8 строки
+ * Кодировщик UTF8 -> UCS2 строки
  * @param input входная UCS2 строка
  * @param size размер входной строки
  * @param output UTF8 строка
- * @return размер выходной строки
+ * @return размер выходной строки (если вернулся 0, ошибка кодирования)
  */
 size_t gsm_encode_UCS2(char * input, size_t size, uint8_t *output)
 {
@@ -118,11 +116,12 @@ size_t gsm_encode_UCS2(char * input, size_t size, uint8_t *output)
         ascii[c_size] = '\0';
 
         uint16_t code = ascii_to_num(ascii, c_size);
-        if (code > 0)
+        if (code > 0) // If match error, ignore her
         {
             output_size += sprintf(c, "%02x%02x", (code & 0xFF00) >> 8, code & 0xFF);
             strcat(output, c);
         }
+        
         k += c_size - 1;
     }
     

@@ -72,7 +72,6 @@ Test(package_submit_pocket, generate_7bit_pdu_type)
         cr_assert(false, "Expect %d, but recieve %d", NO_ERROR, st);
     }
 
-    // TODO: Add decode test
     uint8_t pdu[SUBMIT_PDU_MAX_SIZE];
     size_t size = serialize_submit_pocket(&pdu_pocket, pdu, &size);
     // printf(":: 7bit GSM\nPDU: %s\nSize: %d\n", pdu, size);
@@ -103,7 +102,7 @@ Test(package_submit_pocket, generate_ucs2_pdu_type)
         cr_assert(false, "Expect %d, but recieve %d", NO_ERROR, st);
     }
 
-    // TODO: Add decode test
+    dump_submit_pocket(&pdu_pocket);
     uint8_t pdu[SUBMIT_PDU_MAX_SIZE];
     size_t size = serialize_submit_pocket(&pdu_pocket, pdu, &size);
     // printf(":: USC2\nPDU: %s\nSize: %d\n", pdu, size);
@@ -118,7 +117,11 @@ Test(package_submit_pocket, encoder_ucs2_test)
     
     uint8_t output_msg[100];
     size_t output_size = gsm_encode_UCS2(&input_msg, 28, &output_msg);
-    
+    if (output_size == 0)
+    {
+        cr_assert(false, "Some error");
+    }
+
     if (output_size != 53)
     {
         cr_assert(false, "Wrong size. Expect %d, but recieve %d", 53, output_size);
@@ -129,12 +132,36 @@ Test(package_submit_pocket, encoder_ucs2_test)
 
 Test(package_submit_pocket, encoder_gsm7bit_test)
 {
-    char input_msg[15] = "Hello, friend!";
+    char input_msg[] = "Hello, friend!";
     uint8_t valid_msg[] = "c8329bfd6681ccf274d94d0e01";
                                                   
     uint8_t output_msg[128];
     memset(output_msg, 0, sizeof(output_msg));
 
-    size_t size = gsm_encode_7bit(input_msg, 15, output_msg);
-    cr_assert(!strncmp(valid_msg, output_msg, size), "Expect %s, but recieve %s", valid_msg, output_msg);
+    size_t output_size = gsm_encode_7bit(input_msg, 15, output_msg);
+    if (output_size != 27)
+    {
+        printf("%s\n", output_msg);
+        cr_assert(false, "Wrong size. Expect %d, but recieve %d", 27, output_size);
+    }
+
+    cr_assert(!strncmp(valid_msg, output_msg, output_size), "Expect %s, but recieve %s", valid_msg, output_msg);
+}
+
+Test(package_submit_pocket, encoder_gsm7bit_test2)
+{
+    char input_msg[] = "Goodbye, friend!";
+    uint8_t valid_msg[] = "c7f79b2cce975920b33c5d769343";
+                                                  
+    uint8_t output_msg[128];
+    memset(output_msg, 0, sizeof(output_msg));
+
+    size_t output_size = gsm_encode_7bit(input_msg, 17, output_msg);
+    if (output_size != 30)
+    {
+        printf("%s\n", output_msg);
+        cr_assert(false, "Wrong size. Expect %d, but recieve %d", 30, output_size);
+    }
+
+    cr_assert(!strncmp(valid_msg, output_msg, output_size), "Expect %s, but recieve %s", valid_msg, output_msg);
 }

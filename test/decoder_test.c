@@ -23,13 +23,13 @@ void dump_deviler_pocket(deliver_pdu_pocket *pocket)
     printf("SCTS - %s\n\n", pocket->SCTS);
     
     printf(":: User Data\n");
-    printf("UDL - %d\n", pocket->UDL);
+    printf("UDL - %02x\n", pocket->UDL);
     printf("UD - %s\n", pocket->UD);
 }
 
 Test(deliver_pdu_parser, valid_string)
 {
-    char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
+    char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E00080220708174322135041f04400438043204350442002c002004340440044304330021";
     size_t size = 275;
     
     deliver_pdu_pocket pocket = {0};
@@ -221,26 +221,51 @@ Test(num_from_ascii, wrong_data)
 
 Test(gsm_decode_7bit, valid)
 {
-    const uint8_t *sample = "E474D81C0EBB5DE3771B";
-    const uint8_t *valid = "diafaan.com";
+    const uint8_t *sample = "c8329bfd6681ccf274d94d0e01";
+    const uint8_t *valid = "Hello, friend!";
 
     uint8_t result[21] = {0};
-    gsm_decode_7bit(sample, 21, result);
+    gsm_decode_7bit(sample, 27, result);
 
-    cr_assert(!strncmp(valid, result, 12), "Except %s, but recieve %s",valid,result);
+    cr_assert(!strncmp(valid, result, 15), "Except %s, but recieve %s",valid,result);
 }
+
+Test(gsm_decode_UCS2, valid)
+{
+    const uint8_t *sample = "041f04400438043204350442002c002004340440044304330021";
+    const uint8_t *valid = "Привет, друг!";
+
+    uint8_t result[24] = {0};
+    memset(result, 0, sizeof(result));
+    size_t result_size = gsm_decode_UCS2(sample, 53, result);
+
+    cr_assert(!strncmp(valid, result, result_size), "Except \"%s\", but recieve \"%s\"", valid, result);
+}
+
+
 
 // TODO: More Tests 
 Test(decode_pdu_pocket, valid_UCS2)
 {
-    char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E0008022070817432216A041F04300440043E043B044C003A0020003100380035003900200028043D0438043A043E043C04430020043D043500200433043E0432043E04400438044204350029000A0414043E044104420443043F0020043A00200438043D0444043E0440043C0430044604380438";
+    setlocale(LC_ALL, "");
+
+    char* hex_pocket = "07919761980614F82414D0D9B09B5CC637DFEE721E00080220708174322135041f04400438043204350442002c002004340440044304330021";
     size_t size = 275;
     
     deliver_pdu_pocket pocket = {0};
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
     
+    // dump_deviler_pocket(&pocket);
+
+    if (pst != NO_ERROR)
+    {
+        cr_assert(!pst, "PDU parse status: %d", pst);
+    }
+
     deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
+
+    // printf("\n%s\n", dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
 }
@@ -255,8 +280,13 @@ Test(decode_pdu_pocket, valid_7bit)
     deliver_pdu_pocket pocket = {0};
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
     
+    if (pst != NO_ERROR)
+    {
+        cr_assert(!pst, "PDU parse status: %d", pst);
+    }
+
     deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
 
-    cr_assert(!dst, "%d", dst);
+    cr_assert(!dst, "PDU decode status: %d", dst);
 }
