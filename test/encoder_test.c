@@ -102,7 +102,7 @@ Test(package_submit_pocket, generate_ucs2_pdu_type)
         cr_assert(false, "Expect %d, but recieve %d", NO_ERROR, st);
     }
 
-    dump_submit_pocket(&pdu_pocket);
+    // dump_submit_pocket(&pdu_pocket);
     uint8_t pdu[SUBMIT_PDU_MAX_SIZE];
     size_t size = serialize_submit_pocket(&pdu_pocket, pdu, &size);
     // printf(":: USC2\nPDU: %s\nSize: %d\n", pdu, size);

@@ -243,8 +243,6 @@ Test(gsm_decode_UCS2, valid)
 }
 
 
-
-// TODO: More Tests 
 Test(decode_pdu_pocket, valid_UCS2)
 {
     setlocale(LC_ALL, "");

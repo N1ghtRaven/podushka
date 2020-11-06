@@ -18,18 +18,18 @@
 #define OA_MIN_LEN 1 * 2
 #define OA_MAX_LEN 12 * 2
 
+// PDU fields with fixed offset
 #define PDU_TYPE_LEN 1 * 2
 #define PID_LEN 1 * 2
 #define DCS_LEN 1 * 2
+#define UDL_LEN 1 * 2
 
 // User Data
-#define UDL_LEN 1 * 2
-#define UD_MIN_LEN 0
 #ifndef UD_MAX_LEN
     #define UD_MAX_LEN 140 * 2
 #endif
 
-#define PDU_MIN_LEN SCA_MIN_LEN + OA_MIN_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL_LEN + UD_MIN_LEN
+#define PDU_MIN_LEN SCA_MIN_LEN + OA_MIN_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL_LEN
 #define PDU_MAX_LEN SCA_MAX_LEN + OA_MAX_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL_LEN + UD_MAX_LEN
 
 #define OA_LITTLE_ENDIAN_NUMBER 0x91

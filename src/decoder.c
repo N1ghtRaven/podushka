@@ -125,6 +125,10 @@ uint8_t num_to_ascii(uint8_t num)
     else if ((num >= 'A') && (num <= 'F'))
     {
         return num - 'A' + 10;
+    }
+    else if ((num >= 'a') && (num <= 'f'))
+    {
+        return num - 'a' + 10;
     }   
     else
     {
@@ -210,8 +214,7 @@ size_t gsm_decode_UCS2(uint8_t *input, size_t size, uint8_t *output)
             c[3] = (char) (0x80 | (code & 0x3F));
             c[4] = 0;
         }
-
-        // printf("%d ", c);
+        
         strcat(output, c);             
     }
 
