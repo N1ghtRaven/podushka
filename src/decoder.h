@@ -1,37 +1,42 @@
-#ifndef _PDU_h_
-#define _PDU_h_
+#ifndef _DECODER_h_
+#define _DECODER_h_
 
+#include <stdio.h>
 #include <stdint.h>
-#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
+#include "util.h"
+
+
 // Service Center Address
-#define SCA_MIN_LEN 1
+#define SCA_MIN_LEN 1 * 2
 #define SCA_MAX_LEN 12 * 2
 
 // Originator Address
-#define OA_MIN_LEN 2
+#define OA_MIN_LEN 1 * 2
 #define OA_MAX_LEN 12 * 2
 
-#define PDU_TYPE_LEN 1
-#define PID_LEN 1
-#define DCS_LEN 1
+// PDU fields with fixed offset
+#define PDU_TYPE_LEN 1 * 2
+#define PID_LEN 1 * 2
+#define DCS_LEN 1 * 2
+#define UDL_LEN 1 * 2
 
 // User Data
-#define UDL 1
-#define UD_MIN_LEN 0
-#define UD_MAX_LEN 140 * 2
+#ifndef UD_MAX_LEN
+    #define UD_MAX_LEN 140 * 2
+#endif
 
-#define PDU_MIN_LEN SCA_MIN_LEN + OA_MIN_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL + UD_MIN_LEN
-#define PDU_MAX_LEN SCA_MAX_LEN + OA_MAX_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL + UD_MAX_LEN
-
-#define PDU_FRAME_STEP 2
+#define PDU_MIN_LEN SCA_MIN_LEN + OA_MIN_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL_LEN
+#define PDU_MAX_LEN SCA_MAX_LEN + OA_MAX_LEN + PDU_TYPE_LEN + PID_LEN + DCS_LEN + UDL_LEN + UD_MAX_LEN
 
 #define OA_LITTLE_ENDIAN_NUMBER 0x91
 #define OA_7_BIT 0xD0
 #define DCS_7_BIT 0x00
 #define DCS_UCS2 0x08
-#define TP_SCTS_SIZE 14
+#define SCTS_SIZE 14
 
 typedef enum
 {
@@ -49,23 +54,23 @@ typedef struct
         uint8_t size;
         uint8_t type;
         uint8_t data[SCA_MAX_LEN];
-    } TP_SCA;
+    } SCA;
     
-    uint8_t TP_MTI_CO;
+    uint8_t PDU_TYPE;
 
     struct
     {
         uint8_t size;
         uint8_t type;
         uint8_t data[OA_MAX_LEN];
-    } TP_OA;
+    } OA;
     
-    uint8_t TP_PID;
-    uint8_t TP_DCS;
-    uint8_t TP_SCTS[TP_SCTS_SIZE];
+    uint8_t PID;
+    uint8_t DCS;
+    uint8_t SCTS[SCTS_SIZE];
 
-    uint8_t TP_UDL;
-    uint8_t TP_UD[UD_MAX_LEN];
+    uint8_t UDL;
+    uint8_t UD[UD_MAX_LEN];
 } deliver_pdu_pocket;
 
 /** 
@@ -113,5 +118,6 @@ typedef struct
  * @return статус декодировния
  */
 pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pocket *pocket);
+
 
 #endif
