@@ -1,9 +1,6 @@
-PRJ_NAME=pdu
 CFLAGS +=-s -Os
 
-all: $(PRJ_NAME)
-
-test: decoder_test encoder_test
+all: decoder_test encoder_test
 
 decoder_test: decoder.o util.o
 	mkdir -p exe
@@ -12,7 +9,7 @@ decoder_test: decoder.o util.o
 
 decoder.o:
 	mkdir -p obj
-	$(CC) -c src/decoder.c -o obj/decoder.o
+	$(CC) -c src/decoder.c -o obj/decoder.o $(CFLAGS)
 
 
 encoder_test: encoder.o util.o
@@ -22,11 +19,11 @@ encoder_test: encoder.o util.o
 
 encoder.o:
 	mkdir -p obj
-	$(CC) -c src/encoder.c -o obj/encoder.o
+	$(CC) -c src/encoder.c -o obj/encoder.o $(CFLAGS)
 
 
 util.o:
 	$(CC) -c src/util.c -o obj/util.o
 
 clean:
-	rm -rf *.o $(PRJ_NAME)
+	rm -rf *.o $(PRJ_NAME) decoder_test encoder_test
