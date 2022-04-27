@@ -236,7 +236,7 @@ pdu_decode_status decode_pdu_pocket(deliver_pdu_pocket *pdu_pocket, deliver_pock
         case OA_7_BIT:
             buffer_size = gsm_decode_7bit(pdu_pocket->OA.data, pdu_pocket->OA.size, buffer);
             break;
-        case OA_LITTLE_ENDIAN_NUMBER: //TODO: Testing
+        case OA_LITTLE_ENDIAN_NUMBER:
             buffer_size = pdu_pocket->OA.size;
             switch_endianness(pdu_pocket->OA.data, pdu_pocket->OA.size, buffer);
             break;

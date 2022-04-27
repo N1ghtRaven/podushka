@@ -31,7 +31,7 @@ char *settime(struct tm *u)
     char s[40];
     char *tmp;
     for (int i = 0; i<40; i++) s[i] = 0;
-    int length = strftime(s, 40, "%d.%m.%Y %H:%M:%S, %A", u);
+    int length = strftime(s, 40, "%d.%m.%Y %H:%M:%S", u);
     tmp = (char*)malloc(sizeof(s));
     strcpy(tmp, s);
     return(tmp);
@@ -71,15 +71,18 @@ void main()
 
     if (pst != NO_ERROR)
     {
-        printf("PDU parse status: %d", pst);
+        printf("PDU parse status: %d\n", pst);
     }
+
+    printf("\n:: PDU POCKET\n");
+    dump_pdu(&pocket);
 
     deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
     
     if (dst != NO_ERROR)
     {
-        printf("PDU decode status: %d", pst);
+        printf("PDU decode status: %d\n", pst);
     }
 
     printf("\n:: SMS POCKET\n");

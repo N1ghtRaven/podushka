@@ -131,7 +131,6 @@ Test(deliver_pdu_parser, little_oa_size)
     cr_assert(WRONG_OA_SIZE == st, "Expect %d, but recieve %d", WRONG_OA_SIZE, st);
 }
 
-
 Test(deliver_pdu_parser, ud_size)
 {
     // "07919761980614F82414D0D9B09B5CC637DFEE721E00080220708174322" VALID
@@ -145,7 +144,7 @@ Test(deliver_pdu_parser, ud_size)
 }
 
 
-Test(deliver_pdu_parser, junk) // .init = setup, .fini = dump_pocket
+Test(deliver_pdu_parser, junk)
 {
     // Generate 
     srand(time(0));
@@ -158,8 +157,7 @@ Test(deliver_pdu_parser, junk) // .init = setup, .fini = dump_pocket
 
     deliver_pdu_pocket pocket = {0};
     pdu_parse_status st = parse_deliver_pocket(junk, junk_size, &pocket);
-    // "Expect %d, but recieve %d", WRONG_UD_SIZE, st printf("%d\n",st);
-    cr_assert(st);
+    cr_assert(st, "Expect %d, but recieve %d", WRONG_UD_SIZE, st);
 }
 
 Test(switch_endianness, valid)
@@ -252,8 +250,6 @@ Test(decode_pdu_pocket, valid_UCS2)
     
     deliver_pdu_pocket pocket = {0};
     pdu_parse_status pst = parse_deliver_pocket(hex_pocket, size, &pocket);
-    
-    // dump_deviler_pocket(&pocket);
 
     if (pst != NO_ERROR)
     {
@@ -262,8 +258,6 @@ Test(decode_pdu_pocket, valid_UCS2)
 
     deliver_pocket dec_pocket = {0};
     pdu_decode_status dst = decode_pdu_pocket(&pocket, &dec_pocket);
-
-    // printf("\n%s\n", dec_pocket.message.data);
 
     cr_assert(!dst, "%d", dst);
 }
@@ -288,3 +282,5 @@ Test(decode_pdu_pocket, valid_7bit)
 
     cr_assert(!dst, "PDU decode status: %d", dst);
 }
+
+// TODO: Add little Endian test
